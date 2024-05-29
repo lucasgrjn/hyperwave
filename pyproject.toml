@@ -1,0 +1,6 @@
+[build-system]
+
+[project]
+name = "hyperwavve"
+authors = [{name = "Jesse Lu", email = "jesselu@spinsphotonics.com"}]
+dynamic = ["0.0.1", "Next-gen photonic simulation engine"]
