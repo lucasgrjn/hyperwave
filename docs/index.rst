@@ -35,4 +35,31 @@ We're currently just at the design stage: if you really care about solving Maxwe
      max_fdtd_steps=10_000,  # Maximum number of FDTD step updates.
    )
 
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Getting Started
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: API
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: How it works under the hood
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: How it works under the hood
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: How it works under the hood
+
+
+   
 
