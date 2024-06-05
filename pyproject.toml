@@ -1,3 +1,6 @@
+[tool.yapf]
+indent_width = 2
+
 [build-system]
 requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
