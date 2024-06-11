@@ -1,3 +1,11 @@
+"""FDTD
+
+The workhorse, super-simple simulator.
+
+The idea here is to make this a kind of secondary, internal-only API.
+
+"""
+
 from typing import NamedTuple, Optional, Sequence, Tuple
 
 import jax
@@ -28,6 +36,7 @@ def simulate(
     grid: grids.Grid,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
+    # TODO: Change this to simply be ``source`` and ``output_spec`` with accompanying objects.
     source_offset: defs.Int3,
     source_field: ArrayLike,
     source_waveform: ArrayLike,
@@ -74,8 +83,8 @@ def simulate(
     if state is None:
         state = State(
             step=0,
-            e_field=jnp.zeros((3,) + grid.shape()),
-            h_field=jnp.zeros((3,) + grid.shape()),
+            e_field=jnp.zeros((3,) + grids.shape(grid)),
+            h_field=jnp.zeros((3,) + grids.shape(grid)),
         )
     outs = tuple(jnp.empty((output_range.num, 3) + shape) for shape in output_shapes)
 

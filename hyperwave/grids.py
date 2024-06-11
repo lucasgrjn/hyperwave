@@ -5,26 +5,26 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from .defs import Int3
+from . import defs
+
+# Alias for grid.
+Grid = Tuple[ArrayLike, ArrayLike, ArrayLike]
 
 
-class Grid(NamedTuple):
-    """Defines the grid spacing for the Yee grid."""
+def shape(grid: Grid) -> defs.Int3:
+    return tuple(du.shape[0] for du in grid)
 
-    du: Tuple[ArrayLike, ArrayLike, ArrayLike]
 
-    def shape(self) -> Int3:
-        return tuple(du.shape[0] for du in self.du)
+def is_valid(grid: Grid) -> bool:
+    return all(du.shape[1] == 2 and du.ndim == 2 for du in grid)
 
-    def is_valid(self) -> bool:
-        return all(du.shape[1] == 2 and du.ndim == 2 for du in self.du)
 
-    def values(self, axis: int, is_forward: bool) -> jax.Array:
-        index = 1 if is_forward else 0  # TODO: Not sure if this is correct.
-        return jnp.expand_dims(
-            self.du[axis][:, index],
-            axis=range(axis + 1, 0) if axis < 0 else range(axis + 1, 3),
-        )
+def expanded_deltas(grid: Grid, axis: int, is_forward: bool) -> jax.Array:
+    index = 1 if is_forward else 0  # TODO: Not sure if this is correct.
+    return jnp.expand_dims(
+        grid[axis][:, index],
+        axis=range(axis + 1, 0) if axis < 0 else range(axis + 1, 3),
+    )
 
 
 def spatial_diff(
@@ -46,7 +46,7 @@ def curl(field: ArrayLike, grid: Grid, is_forward: bool) -> jax.Array:
     dx, dy, dz = [
         partial(
             spatial_diff,
-            delta=grid.values(axis=a, is_forward=is_forward),
+            delta=expanded_deltas(grid, axis=a, is_forward=is_forward),
             axis=a,
             is_forward=is_forward,
         )
