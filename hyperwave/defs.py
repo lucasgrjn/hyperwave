@@ -1,3 +1,6 @@
+"""Basic definitions."""
+
 from typing import Tuple
 
-Int3 = Tuple[int, int, int]  # Used for ``(x, y, z)`` tuple.
+# Tuple of 3 integers, used for ``(x, y, z)`` data.
+Int3 = Tuple[int, int, int]
