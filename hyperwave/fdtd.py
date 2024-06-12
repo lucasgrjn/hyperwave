@@ -114,7 +114,7 @@ def simulate(
     ) -> Tuple[State, Outputs]:
         """``num_steps`` updates on ``state`` with ``output_index`` snapshot."""
         state = jax.lax.fori_loop(
-            lower=0, upper=num_steps, body_fun=step_fn, init_val=state
+            lower=0, upper=num_steps + 1, body_fun=step_fn, init_val=state
         )
         outs = output_fn(output_index, outs, state.e_field)
         return state, outs
