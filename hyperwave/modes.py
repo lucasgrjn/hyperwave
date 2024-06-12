@@ -1,3 +1,1 @@
-"""Extract modes
-
-"""
+"""Extract modal and TF/SF fields."""

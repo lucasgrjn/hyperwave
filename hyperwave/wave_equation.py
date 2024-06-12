@@ -1,7 +1,3 @@
-"""Electromagnetic wave equation.
-
-This is what holds everything together.
-
-"""
+"""Computes the electromagnetic wave equation error."""
 
 # Compute the error.

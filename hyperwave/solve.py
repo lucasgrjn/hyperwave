@@ -1,4 +1,1 @@
-"""Solve the wave equation.
-
-This is the primary API.
-"""
+"""Solves the wave equation via FDTD simulation."""

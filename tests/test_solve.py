@@ -1,1 +1,1 @@
-"""Make sure we can solve the wave equation."""
+"""Ensure that ``solve.solve()`` solves the wave equation."""
