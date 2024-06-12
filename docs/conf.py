@@ -66,5 +66,5 @@ autodoc_typehints = "description"
 autodoc_typehints_description_target = "all"
 autodoc_type_aliases = {
     "ArrayLike": "ArrayLike",
-    "grids.Grid": "Grid",
+    "Grid": "Grid",
 }

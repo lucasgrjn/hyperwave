@@ -18,19 +18,10 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from . import defs
-
-# Minimal, sufficient definition of the Yee lattice for the simulation volume.
-#
-# Defines the distance between adjacent components along x-, y-, and z-axes.
-# Each of the three arrays should be of shape ``(uu, 2)`` for each of the 3
-# spatial axes, where the ``[:, 1]`` values are shifted by half a cell in the
-# positive direction of the axis in relation to the ``[:, 0]`` values.
-#
-Grid = Tuple[ArrayLike, ArrayLike, ArrayLike]
+from .typing import Grid, Int3
 
 
-def shape(grid: Grid) -> defs.Int3:
+def shape(grid: Grid) -> Int3:
     """``(xx, yy, zz)`` shape of the simulation volume according to ``grid``."""
     return tuple(du.shape[0] for du in grid)
 

@@ -17,7 +17,8 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from . import defs, grids, utils
+from . import grids, utils
+from .typing import Grid, Int3
 
 
 class State(NamedTuple):
@@ -31,7 +32,7 @@ class State(NamedTuple):
 class Source(NamedTuple):
     """Current source to inject into the simulation."""
 
-    offset: defs.Int3  # Location to inject source in simulation volume.
+    offset: Int3  # Location to inject source in simulation volume.
     field: ArrayLike  # ``(3, xx0, yy0, zz0)`` complex-valued source field.
     waveform: ArrayLike  # ``(tt,)`` complex-valued source amplitude.
 
@@ -47,8 +48,8 @@ class OutputSpec(NamedTuple):
     start: int
     interval: int
     num: int
-    offsets: Sequence[defs.Int3]
-    shapes: Sequence[defs.Int3]
+    offsets: Sequence[Int3]
+    shapes: Sequence[Int3]
 
 
 # Convenience type alias for simulation outputs.
@@ -57,7 +58,7 @@ Outputs = Tuple[jax.Array, ...]
 
 def simulate(
     dt: float,
-    grid: grids.Grid,
+    grid: Grid,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
     source: Source,

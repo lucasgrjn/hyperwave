@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from jax.typing import ArrayLike
 
-from . import defs
+from .typing import Int3
 
 
-def at(field: ArrayLike, offset: defs.Int3, shape: defs.Int3):
+def at(field: ArrayLike, offset: Int3, shape: Int3):
     """Modify ``shape`` values of ``field`` at ``offset``."""
     return field.at[
         ...,
@@ -17,7 +17,7 @@ def at(field: ArrayLike, offset: defs.Int3, shape: defs.Int3):
     ]
 
 
-def get(field: ArrayLike, offset: defs.Int3, shape: defs.Int3):
+def get(field: ArrayLike, offset: Int3, shape: Int3):
     """Returns ``shape`` values of ``field`` at ``offset``."""
     return field[
         ...,
