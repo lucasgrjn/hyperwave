@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
-import numpy as np
 
-from hyperwave import solve
+from hyperwave import sampling, solve
 
 
 def run_solve(shape, omegas, err_thresh, max_steps):
@@ -43,7 +42,7 @@ def run_solve(shape, omegas, err_thresh, max_steps):
 def test_run_solve():
     assert run_solve(
         shape=(100, 100, 40),
-        omegas=solve.FreqSpace(
+        omegas=sampling.FreqSpace(
             start=2 * jnp.pi / 20,
             stop=2 * jnp.pi / 16,
             num=20,

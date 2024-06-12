@@ -83,7 +83,8 @@ def simulate(
         source: Current source to inject in the simulation.
         output_spec: Defines E-field snapshots to return, relative to the time
           step of the initial state of the simulation.
-        state: Initial state of the simulation.
+        state: Initial state of the simulation. Defaults to field values of
+          ``0`` everywhere at ``step = -1``.
 
     Returns:
       ``(state, outputs)`` corresponding to updated simulation state and output
