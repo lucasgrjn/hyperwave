@@ -99,7 +99,7 @@ def simulate(
         """``state`` evolved by one FDTD update."""
         step, e, h = state
         h = h - dt * grids.curl(e, grid, is_forward=True)
-        e = ca * e + cb * source.inject(grids.curl(h, grid, is_forward=False), step)
+        e = ca * e + cb * source.inject(grids.curl(h, grid, is_forward=False), step + 1)
         return State(step + 1, e, h)
 
     def output_fn(index: int, outs: Outputs, e_field: ArrayLike) -> Outputs:

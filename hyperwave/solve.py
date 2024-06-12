@@ -193,16 +193,13 @@ def source_waveform(
     )
 
 
-def simulate_new(
-    e_field: ArrayLike,
-    h_field: ArrayLike,
+def simulate_newer(
     epsilon: ArrayLike,
     sigma: ArrayLike,
     sources: Sequence[InputSpec],
     outputs: Sequence[OutputSpec],
     grid: Grid,
-    start_step: int,
-    num_steps: int,
+    state: fdtd.State | None = None,
 ) -> Tuple[jax.Array, jax.Array, Tuple[jax.Array, ...]]:
 
     state, outs = fdtd.simulate(
@@ -218,19 +215,53 @@ def simulate_new(
         output_spec=fdtd.OutputSpec(
             offsets=[outputs[0].offset],
             shapes=[outputs[0].shape],
-            start=outputs[0].range.start + 1,
+            start=outputs[0].range.start,
             interval=outputs[0].range.interval,
             num=outputs[0].range.num,
         ),
-        state=fdtd.State(
-            step=start_step,
-            e_field=e_field,
-            h_field=h_field,
-        ),
+        state=state,
     )
-    return state.e_field, state.h_field, outs
+    return state, outs
 
 
+# def simulate_new(
+#     e_field: ArrayLike,
+#     h_field: ArrayLike,
+#     epsilon: ArrayLike,
+#     sigma: ArrayLike,
+#     sources: Sequence[InputSpec],
+#     outputs: Sequence[OutputSpec],
+#     grid: Grid,
+#     start_step: int,
+#     num_steps: int,
+# ) -> Tuple[jax.Array, jax.Array, Tuple[jax.Array, ...]]:
+#
+#     state, outs = fdtd.simulate(
+#         dt=grid.dt,
+#         grid=grid.du,
+#         permittivity=epsilon,
+#         conductivity=sigma,
+#         source=fdtd.Source(
+#             offset=sources[0].offset,
+#             field=sources[0].field,
+#             waveform=sources[0].waveform,
+#         ),
+#         output_spec=fdtd.OutputSpec(
+#             offsets=[outputs[0].offset],
+#             shapes=[outputs[0].shape],
+#             start=outputs[0].range.start + 1,
+#             interval=outputs[0].range.interval,
+#             num=outputs[0].range.num,
+#         ),
+#         state=fdtd.State(
+#             step=start_step,
+#             e_field=e_field,
+#             h_field=h_field,
+#         ),
+#     )
+#     return state.e_field, state.h_field, outs
+#
+#
 # def simulate(
 #     e_field: ArrayLike,
 #     h_field: ArrayLike,
@@ -370,6 +401,8 @@ def solve(
 
     errs_hist = []  # TODO: Remove.
 
+    state = None
+
     for start_step in range(0, max_steps, steps_per_sim):
         outputspec = OutputSpec(
             offset=(0, 0, 0),
@@ -382,17 +415,27 @@ def solve(
         )
         print(f"{outputspec.range}")
 
+        # # Run simulation.
+        # e_field, h_field, outs = simulate_new(
+        #     e_field=e_field,
+        #     h_field=h_field,
+        #     epsilon=epsilon,
+        #     sigma=sigma,
+        #     sources=[inputspec],
+        #     outputs=[outputspec],
+        #     grid=grid,
+        #     start_step=start_step,
+        #     num_steps=steps_per_sim,
+        # )
+
         # Run simulation.
-        e_field, h_field, outs = simulate_new(
-            e_field=e_field,
-            h_field=h_field,
+        state, outs = simulate_newer(
+            state=state,
             epsilon=epsilon,
             sigma=sigma,
             sources=[inputspec],
             outputs=[outputspec],
             grid=grid,
-            start_step=start_step,
-            num_steps=steps_per_sim,
         )
 
         # Infer time-harmonic fields.
