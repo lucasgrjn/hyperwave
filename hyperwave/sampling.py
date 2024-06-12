@@ -6,6 +6,7 @@ from typing import NamedTuple
 
 import jax
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 
 from .typing import Range
 
@@ -37,6 +38,20 @@ def sampling_interval(wavelength_range: Range) -> float:
 
 def _round_to_mult(x, multiple, offset=0):
     return (round(x / multiple - offset) + offset) * multiple
+
+
+def freq_projection(
+    snapshots: ArrayLike,
+    wavelength: ArrayLike,
+    t: ArrayLike,
+) -> jax.Array:
+    # Build ``P`` matrix.
+    wt = dt * omegas[None, :] * (snapshots.arange()[:, None] + 0.5)
+    P = jnp.concatenate([jnp.cos(wt), -jnp.sin(wt)], axis=1)
+
+    # Project out frequency components.
+    res = jnp.einsum("ij,j...->i...", jnp.linalg.inv(P), snapshots)
+    return res[: len(omegas)] + 1j * res[len(omegas) :]
 
 
 class FreqSpace(NamedTuple):
