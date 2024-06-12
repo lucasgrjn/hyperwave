@@ -12,7 +12,6 @@ component axis.
 from __future__ import annotations
 
 from functools import partial
-from typing import Tuple
 
 import jax
 import jax.numpy as jnp

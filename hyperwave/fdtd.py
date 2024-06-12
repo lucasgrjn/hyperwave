@@ -122,7 +122,7 @@ def simulate(
     # Initialize initial state and outputs.
     if state is None:
         state = State(
-            step=0,
+            step=-1,
             e_field=jnp.zeros((3,) + grids.shape(grid)),
             h_field=jnp.zeros((3,) + grids.shape(grid)),
         )
@@ -132,7 +132,7 @@ def simulate(
 
     # Initial update to first output.
     state, outs = update_and_output(
-        state, outs, output_index=0, num_steps=output_spec.start
+        state, outs, output_index=0, num_steps=output_spec.start - state.step
     )
 
     # Materialize the rest of the output snapshots.

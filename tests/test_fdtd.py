@@ -32,5 +32,8 @@ def test_fdtd_simulation():
     assert state.e_field.shape == (3, 1, 1, 1)
     np.testing.assert_array_equal(
         outs[0][:, 0, 0, 0, 0],
-        output_spec.start + output_spec.interval * jnp.arange(output_spec.num),
+        output_spec.start + output_spec.interval * jnp.arange(output_spec.num) + 1,
     )
+
+
+# TODO: Test continuity. That is, that we can get the same result with two simulations as with a single simulation.

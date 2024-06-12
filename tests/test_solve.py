@@ -49,67 +49,67 @@ def test_run_solve():
             num=20,
         ),
         err_thresh=1e-2,
-        max_steps=10_000,
+        max_steps=5_000,
     )
 
 
-def test_comp_sim():
-    dt = 1.0
-    shape = (1, 1, 1)
-    grid = solve.Grid(dt=dt, du=tuple(jnp.ones((s, 2)) for s in shape))
-    e_field = jnp.zeros((3,) + shape)
-    h_field = jnp.zeros((3,) + shape)
-    epsilon = jnp.ones((3,) + shape)
-    sigma = jnp.zeros((3,) + shape)
-    source = jnp.zeros((3,) + shape)
-    source = source.at[2, 0, 0, 0].set(1.0)
-    start_step = 0
-    outputspec = solve.OutputSpec(
-        offset=(0, 0, 0),
-        shape=grid.shape(),
-        range=solve.SnapshotRange(
-            start=0,
-            interval=4,
-            num=3,
-        ),
-    )
-    num_steps = (
-        outputspec.range.start
-        + (outputspec.range.num - 1) * outputspec.range.interval
-        + 1
-    )
-    inputspec = solve.InputSpec(
-        offset=(0, 0, 0),
-        field=source,
-        waveform=-jnp.ones((num_steps + 1,)),
-        # waveform=solve.source_waveform(
-        #     t=grid.dt * jnp.arange(max_steps),
-        #     omegas=omegas,
-        #     rise_time=1,  # TODO: Put constant somewhere better.
-        # ),
-    )
-    e_field_0, h_field_0, outs_0 = solve.simulate(
-        e_field=e_field,
-        h_field=h_field,
-        epsilon=epsilon,
-        sigma=sigma,
-        sources=[inputspec],
-        outputs=[outputspec],
-        grid=grid,
-        start_step=start_step,
-        num_steps=num_steps,
-    )
-    e_field_1, h_field_1, outs_1 = solve.simulate_new(
-        e_field=e_field,
-        h_field=h_field,
-        epsilon=epsilon,
-        sigma=sigma,
-        sources=[inputspec],
-        outputs=[outputspec],
-        grid=grid,
-        start_step=start_step,
-        num_steps=num_steps,
-    )
-    np.testing.assert_array_equal(e_field_0, e_field_1)
-    np.testing.assert_array_equal(h_field_0, h_field_1)
-    np.testing.assert_array_equal(outs_0[0][:, 2, 0, 0, 0], outs_1[0][:, 2, 0, 0, 0])
+# def test_comp_sim():
+#     dt = 1.0
+#     shape = (1, 1, 1)
+#     grid = solve.Grid(dt=dt, du=tuple(jnp.ones((s, 2)) for s in shape))
+#     e_field = jnp.zeros((3,) + shape)
+#     h_field = jnp.zeros((3,) + shape)
+#     epsilon = jnp.ones((3,) + shape)
+#     sigma = jnp.zeros((3,) + shape)
+#     source = jnp.zeros((3,) + shape)
+#     source = source.at[2, 0, 0, 0].set(1.0)
+#     start_step = 0
+#     outputspec = solve.OutputSpec(
+#         offset=(0, 0, 0),
+#         shape=grid.shape(),
+#         range=solve.SnapshotRange(
+#             start=0,
+#             interval=4,
+#             num=3,
+#         ),
+#     )
+#     num_steps = (
+#         outputspec.range.start
+#         + (outputspec.range.num - 1) * outputspec.range.interval
+#         + 1
+#     )
+#     inputspec = solve.InputSpec(
+#         offset=(0, 0, 0),
+#         field=source,
+#         waveform=-jnp.ones((num_steps + 1,)),
+#         # waveform=solve.source_waveform(
+#         #     t=grid.dt * jnp.arange(max_steps),
+#         #     omegas=omegas,
+#         #     rise_time=1,  # TODO: Put constant somewhere better.
+#         # ),
+#     )
+#     e_field_0, h_field_0, outs_0 = solve.simulate(
+#         e_field=e_field,
+#         h_field=h_field,
+#         epsilon=epsilon,
+#         sigma=sigma,
+#         sources=[inputspec],
+#         outputs=[outputspec],
+#         grid=grid,
+#         start_step=start_step,
+#         num_steps=num_steps,
+#     )
+#     e_field_1, h_field_1, outs_1 = solve.simulate_new(
+#         e_field=e_field,
+#         h_field=h_field,
+#         epsilon=epsilon,
+#         sigma=sigma,
+#         sources=[inputspec],
+#         outputs=[outputspec],
+#         grid=grid,
+#         start_step=start_step,
+#         num_steps=num_steps,
+#     )
+#     np.testing.assert_array_equal(e_field_0, e_field_1)
+#     np.testing.assert_array_equal(h_field_0, h_field_1)
+#     np.testing.assert_array_equal(outs_0[0][:, 2, 0, 0, 0], outs_1[0][:, 2, 0, 0, 0])

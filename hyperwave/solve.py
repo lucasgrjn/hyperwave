@@ -218,7 +218,7 @@ def simulate_new(
         output_spec=fdtd.OutputSpec(
             offsets=[outputs[0].offset],
             shapes=[outputs[0].shape],
-            start=outputs[0].range.start - start_step + 1,
+            start=outputs[0].range.start + 1,
             interval=outputs[0].range.interval,
             num=outputs[0].range.num,
         ),
@@ -231,49 +231,49 @@ def simulate_new(
     return state.e_field, state.h_field, outs
 
 
-def simulate(
-    e_field: ArrayLike,
-    h_field: ArrayLike,
-    epsilon: ArrayLike,
-    sigma: ArrayLike,
-    sources: Sequence[InputSpec],
-    outputs: Sequence[OutputSpec],
-    grid: Grid,
-    start_step: int,
-    num_steps: int,
-) -> Tuple[jax.Array, jax.Array, Tuple[jax.Array, ...]]:
-
-    # Precomputed update coefficients
-    z = sigma * grid.dt / (2 * epsilon)
-    ca = (1 - z) / (1 + z)
-    cb = grid.dt / epsilon / (1 + z)
-
-    def step_fn(step, state):
-        e, h, outs = state
-
-        h = h - grid.dt * curl(e, grid, is_forward=True)
-
-        u = curl(h, grid, is_forward=False)
-        for source in sources:
-            u = source.inject(u, step)
-        e = ca * e + cb * u
-
-        outs = tuple(output.update(out, e, step) for out, output in zip(outs, outputs))
-
-        return e, h, outs
-
-    # Initialize output arrays.
-    outs = tuple(output.init_array() for output in outputs)
-
-    # Run the simulation.
-    return jax.lax.fori_loop(
-        lower=start_step,
-        upper=start_step + num_steps,
-        body_fun=step_fn,
-        init_val=(e_field, h_field, outs),
-    )
-
-
+# def simulate(
+#     e_field: ArrayLike,
+#     h_field: ArrayLike,
+#     epsilon: ArrayLike,
+#     sigma: ArrayLike,
+#     sources: Sequence[InputSpec],
+#     outputs: Sequence[OutputSpec],
+#     grid: Grid,
+#     start_step: int,
+#     num_steps: int,
+# ) -> Tuple[jax.Array, jax.Array, Tuple[jax.Array, ...]]:
+#
+#     # Precomputed update coefficients
+#     z = sigma * grid.dt / (2 * epsilon)
+#     ca = (1 - z) / (1 + z)
+#     cb = grid.dt / epsilon / (1 + z)
+#
+#     def step_fn(step, state):
+#         e, h, outs = state
+#
+#         h = h - grid.dt * curl(e, grid, is_forward=True)
+#
+#         u = curl(h, grid, is_forward=False)
+#         for source in sources:
+#             u = source.inject(u, step)
+#         e = ca * e + cb * u
+#
+#         outs = tuple(output.update(out, e, step) for out, output in zip(outs, outputs))
+#
+#         return e, h, outs
+#
+#     # Initialize output arrays.
+#     outs = tuple(output.init_array() for output in outputs)
+#
+#     # Run the simulation.
+#     return jax.lax.fori_loop(
+#         lower=start_step,
+#         upper=start_step + num_steps,
+#         body_fun=step_fn,
+#         init_val=(e_field, h_field, outs),
+#     )
+#
+#
 def freq_projection(
     fields: ArrayLike,
     omegas: FreqSpace,
