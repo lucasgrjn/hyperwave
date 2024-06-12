@@ -21,6 +21,12 @@ A next-generation photonic simulation engine that is:
 We're currently just at the design stage: if you really care about solving Maxwell's equations, please join our `discord channel <https://discord.gg/CfzDRjeX>`_!
 
 
+Testing autodoc...
+
+.. currentmodule:: hyperwave.fdtd
+
+.. autofunction:: simulate
+
 .. code-block:: python
 
    import hyperwave as hw

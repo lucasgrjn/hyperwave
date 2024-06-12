@@ -1,5 +1,7 @@
 """Utility functions."""
 
+from __future__ import annotations
+
 from jax.typing import ArrayLike
 
 from . import defs

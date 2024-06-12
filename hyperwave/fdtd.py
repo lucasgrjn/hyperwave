@@ -9,7 +9,9 @@ optimized FDTD routines to be used in the place of the one outlined here.
 
 """
 
-from typing import NamedTuple, Optional, Sequence, Tuple
+from __future__ import annotations
+
+from typing import NamedTuple, Sequence, Tuple
 
 import jax
 import jax.numpy as jnp
@@ -60,7 +62,7 @@ def simulate(
     conductivity: ArrayLike,
     source: Source,
     output_spec: OutputSpec,
-    state: Optional[State] = None,
+    state: State | None = None,
 ) -> Tuple[State, Outputs]:
     """Execute the finite-difference time-domain (FDTD) simulation method.
 
