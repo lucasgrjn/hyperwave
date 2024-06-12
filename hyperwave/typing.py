@@ -9,6 +9,10 @@ from jax.typing import ArrayLike
 # Tuple of 3 integers, used for ``(x, y, z)`` data.
 Int3 = Tuple[int, int, int]
 
+# ``(start, stop, num)`` representing ``num`` points over the interval
+# ``[start, stop]``.
+Range = Tuple[float, float, int]
+
 # Minimal, sufficient definition of the Yee lattice for the simulation volume.
 #
 # Defines the distance between adjacent components along x-, y-, and z-axes.

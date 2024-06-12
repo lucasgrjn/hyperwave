@@ -7,7 +7,7 @@ import jax.numpy as jnp
 from hyperwave import sampling, solve
 
 
-def run_solve(shape, omegas, err_thresh, max_steps):
+def run_solve(shape, wavelength, err_thresh, max_steps):
     xx, yy, zz = shape
     dt = 0.99 / jnp.sqrt(3)
     grid = solve.Grid(dt=dt, du=tuple(jnp.ones((s, 2)) for s in shape))
@@ -17,7 +17,7 @@ def run_solve(shape, omegas, err_thresh, max_steps):
     source = source.at[2, xx // 2, yy // 2, zz // 2].set(2.0)
 
     fields, errs, steps, is_success, err_fields, err_hist = solve.solve(
-        omegas=omegas,
+        wavelength=wavelength,
         epsilon=epsilon,
         sigma=sigma,
         source=source,
@@ -40,13 +40,15 @@ def run_solve(shape, omegas, err_thresh, max_steps):
 
 
 def test_run_solve():
+    # TODO: Also test that we complete in > 1 iterations?
     assert run_solve(
         shape=(100, 100, 40),
-        omegas=sampling.FreqSpace(
-            start=2 * jnp.pi / 20,
-            stop=2 * jnp.pi / 16,
-            num=20,
-        ),
+        wavelength=(16.0, 20.0, 20),
+        # sampling.FreqSpace(
+        #     start=2 * jnp.pi / 20,
+        #     stop=2 * jnp.pi / 16,
+        #     num=20,
+        # ),
         err_thresh=1e-2,
         max_steps=5_000,
     )

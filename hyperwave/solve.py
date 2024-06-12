@@ -9,6 +9,7 @@ import jax
 import jax.numpy as jnp
 
 from . import fdtd, sampling
+from .typing import Range
 
 # Type alias for jax function inputs. See
 # https://jax.readthedocs.io/en/latest/jax.typing.html#jax-typing-best-practices
@@ -180,7 +181,8 @@ def curl(field: ArrayLike, grid: Grid, is_forward: bool) -> jax.Array:
 
 def source_waveform(
     t: ArrayLike,
-    omegas: sampling.FreqSpace,
+    omegas: ArrayLike,
+    phases: ArrayLike,
     rise_time: float,
 ) -> jax.Array:
     # NOTE: ``rise_time`` refers to the amount of time taken for the sigmoid
@@ -190,7 +192,7 @@ def source_waveform(
     # ``jax.nn.sigmoid(+4.6)``.
 
     return (jax.nn.sigmoid(4.6 * (2 * t / rise_time - 1))) * jnp.sum(
-        (jnp.exp(1j * (omegas.freqs[:, None] * t + omegas.phases[:, None]))), axis=0
+        (jnp.exp(1j * (omegas[:, None] * t + phases[:, None]))), axis=0
     )
 
 
@@ -308,12 +310,12 @@ def simulate_newer(
 #
 def freq_projection(
     fields: ArrayLike,
-    omegas: sampling.FreqSpace,
+    omegas: ArrayLike,
     snapshots: SnapshotRange,
     dt: float,
 ) -> jax.Array:
     # Build ``P`` matrix.
-    wt = dt * omegas.freqs[None, :] * (snapshots.arange()[:, None] + 0.5)
+    wt = dt * omegas[None, :] * (snapshots.arange()[:, None] + 0.5)
     P = jnp.concatenate([jnp.cos(wt), -jnp.sin(wt)], axis=1)
     # plt.figure()
     # plt.imshow(P, vmin=-1, vmax=+1)
@@ -325,19 +327,20 @@ def freq_projection(
 
     # Project out frequency components.
     res = jnp.einsum("ij,j...->i...", jnp.linalg.inv(P), fields)
-    return res[: omegas.num] + 1j * res[omegas.num :]
+    return res[: len(omegas)] + 1j * res[len(omegas) :]
 
 
 def wave_equation_errors(
     fields: ArrayLike,
-    omegas: sampling.FreqSpace,
+    omegas: ArrayLike,
+    phases: ArrayLike,
     epsilon: ArrayLike,
     sigma: ArrayLike,
     source: ArrayLike,
     grid: Grid,
 ) -> jax.Array:
-    w = jnp.expand_dims(omegas.freqs, axis=range(-4, 0))
-    phi = jnp.expand_dims(omegas.phases, axis=range(-4, 0))
+    w = jnp.expand_dims(omegas, axis=range(-4, 0))
+    phi = jnp.expand_dims(phases, axis=range(-4, 0))
     err = (
         curl(curl(fields, grid, is_forward=True), grid, is_forward=False)
         - w**2 * (epsilon - 1j * sigma / w) * fields
@@ -345,12 +348,15 @@ def wave_equation_errors(
     )
     return (
         jnp.sqrt(jnp.sum(jnp.abs(err) ** 2, axis=(1, 2, 3, 4)))
-        / (omegas.freqs * jnp.linalg.norm(source))
+        / (omegas * jnp.linalg.norm(source))
     ), err
 
 
+# TODO: Automatically compute ``dt``, based on ``min(epsilon)`` (and stuff in grid as well).
+# TODO: Switch to wavelength and do some balancing thing with grid.
 def solve(
-    omegas: sampling.FreqSpace,
+    # omegas: sampling.FreqSpace,
+    wavelength: Range | float,
     epsilon: ArrayLike,
     sigma: ArrayLike,
     source: ArrayLike,
@@ -359,16 +365,21 @@ def solve(
     max_steps: int,
 ) -> Tuple[jax.Array, jax.Array, int, bool]:
     """Solution fields and error for the wave equation at ``omegas``."""
+    if isinstance(wavelength, float):
+        wavelength = (wavelength, wavelength, 1)
+
+    omegas = sampling.omegas(wavelength)
+    sampling_interval = sampling.sampling_interval(wavelength)
 
     # Steps to sample against.
-    if omegas.num > 1:  # Adjust dt.
-        n = int(jnp.floor(omegas.sampling_interval / grid.dt))
-        dt = omegas.sampling_interval / (n + 1)
+    if len(omegas) > 1:  # Adjust dt.
+        n = int(jnp.floor(sampling_interval / grid.dt))
+        dt = sampling_interval / (n + 1)
         sample_every_n_steps = n + 1
         grid = Grid(dt=dt, du=grid.du)
     else:
-        sample_every_n_steps = int(round(omegas.sampling_interval / grid.dt))
-    sample_steps = sample_every_n_steps * (2 * omegas.num - 1) + 1
+        sample_every_n_steps = int(round(sampling_interval / grid.dt))
+    sample_steps = sample_every_n_steps * (2 * len(omegas) - 1) + 1
 
     print(f"{sample_every_n_steps}")
 
@@ -386,6 +397,9 @@ def solve(
     if max_steps % steps_per_sim != 0:
         max_steps = max_steps + steps_per_sim - (max_steps % steps_per_sim)
 
+    # TODO: Do something for phases here.
+    phases = -1 * jnp.pi * jnp.arange(len(omegas))
+
     # Form input for simulation.
     inputspec = InputSpec(
         offset=(0, 0, 0),
@@ -393,6 +407,7 @@ def solve(
         waveform=source_waveform(
             t=grid.dt * jnp.arange(max_steps),
             omegas=omegas,
+            phases=phases,
             rise_time=1,  # TODO: Put constant somewhere better.
         ),
     )
@@ -411,7 +426,7 @@ def solve(
             range=SnapshotRange(
                 start=start_step + steps_per_sim - sample_steps,
                 interval=sample_every_n_steps,
-                num=2 * omegas.num,
+                num=2 * len(omegas),
             ),
         )
         print(f"{outputspec.range}")
@@ -446,6 +461,7 @@ def solve(
         errs, err_fields = wave_equation_errors(
             fields=freq_fields,
             omegas=omegas,
+            phases=phases,
             epsilon=epsilon,
             sigma=sigma,
             source=source,
