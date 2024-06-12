@@ -37,8 +37,8 @@ class Source(NamedTuple):
     waveform: ArrayLike  # ``(tt,)`` complex-valued source amplitude.
 
     def inject(self, e_field: ArrayLike, step: int) -> jax.Array:
-        return utils.at(e_field, self.offset, self.field.shape).add(
-            self.field * self.waveform[step]
+        return utils.at(e_field, self.offset, self.field.shape[-3:]).add(
+            -jnp.real(self.field * self.waveform[step])
         )
 
 

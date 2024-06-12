@@ -24,11 +24,12 @@ def test_fdtd_simulation():
         conductivity=jnp.zeros((3, 1, 1, 1)),
         source=fdtd.Source(
             offset=(0, 0, 0),
-            field=jnp.ones((3, 1, 1, 1)),
+            field=-jnp.ones((3, 1, 1, 1)),
             waveform=jnp.ones((num_steps,)),
         ),
         output_spec=output_spec,
     )
+    assert state.e_field.shape == (3, 1, 1, 1)
     np.testing.assert_array_equal(
         outs[0][:, 0, 0, 0, 0],
         output_spec.start + output_spec.interval * jnp.arange(output_spec.num),
