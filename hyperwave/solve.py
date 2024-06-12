@@ -193,7 +193,7 @@ def source_waveform(
     )
 
 
-def simulate(
+def simulate_new(
     e_field: ArrayLike,
     h_field: ArrayLike,
     epsilon: ArrayLike,
@@ -218,7 +218,7 @@ def simulate(
         output_spec=fdtd.OutputSpec(
             offsets=[outputs[0].offset],
             shapes=[outputs[0].shape],
-            start=outputs[0].range.start - start_step,
+            start=outputs[0].range.start - start_step + 1,
             interval=outputs[0].range.interval,
             num=outputs[0].range.num,
         ),
@@ -229,6 +229,19 @@ def simulate(
         ),
     )
     return state.e_field, state.h_field, outs
+
+
+def simulate(
+    e_field: ArrayLike,
+    h_field: ArrayLike,
+    epsilon: ArrayLike,
+    sigma: ArrayLike,
+    sources: Sequence[InputSpec],
+    outputs: Sequence[OutputSpec],
+    grid: Grid,
+    start_step: int,
+    num_steps: int,
+) -> Tuple[jax.Array, jax.Array, Tuple[jax.Array, ...]]:
 
     # Precomputed update coefficients
     z = sigma * grid.dt / (2 * epsilon)
@@ -370,7 +383,7 @@ def solve(
         print(f"{outputspec.range}")
 
         # Run simulation.
-        e_field, h_field, outs = simulate(
+        e_field, h_field, outs = simulate_new(
             e_field=e_field,
             h_field=h_field,
             epsilon=epsilon,
