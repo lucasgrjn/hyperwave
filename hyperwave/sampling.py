@@ -11,18 +11,17 @@ from jax.typing import ArrayLike
 from .typing import Range
 
 
-def omegas(wavelength_range: Range) -> jax.Array:
+def omegas(freq_range: Range) -> jax.Array:
     # Convert to angular frequency.
-    start, stop, num = wavelength_range
-    start, stop = [2 * jnp.pi / wvlen for wvlen in (stop, start)]
+    start, stop, num = freq_range
     if num == 1:
         return jnp.array([(start + stop) / 2])
     else:
         return jnp.linspace(start, stop, num)
 
 
-def sampling_interval(wavelength_range: Range) -> float:
-    w = omegas(wavelength_range)
+def sampling_interval(freq_range: Range) -> float:
+    w = omegas(freq_range)
 
     if len(w) == 1:
         return float(jnp.pi / (2 * w[0]))  # Quarter-period.
@@ -42,7 +41,7 @@ def _round_to_mult(x, multiple, offset=0):
 
 def freq_projection(
     snapshots: ArrayLike,
-    wavelength: ArrayLike,
+    omegas: ArrayLike,
     t: ArrayLike,
 ) -> jax.Array:
     # Build ``P`` matrix.

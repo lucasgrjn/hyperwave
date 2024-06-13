@@ -356,20 +356,17 @@ def wave_equation_errors(
 # TODO: Switch to wavelength and do some balancing thing with grid.
 def solve(
     # omegas: sampling.FreqSpace,
-    wavelength: Range | float,
-    epsilon: ArrayLike,
-    sigma: ArrayLike,
+    freq_range: Range,
+    permittivity: ArrayLike,
+    conductivity: ArrayLike,
     source: ArrayLike,
     grid: Grid,
     err_thresh: float,
     max_steps: int,
 ) -> Tuple[jax.Array, jax.Array, int, bool]:
     """Solution fields and error for the wave equation at ``omegas``."""
-    if isinstance(wavelength, float):
-        wavelength = (wavelength, wavelength, 1)
-
-    omegas = sampling.omegas(wavelength)
-    sampling_interval = sampling.sampling_interval(wavelength)
+    omegas = sampling.omegas(freq_range)
+    sampling_interval = sampling.sampling_interval(freq_range)
 
     # Steps to sample against.
     if len(omegas) > 1:  # Adjust dt.
@@ -413,7 +410,7 @@ def solve(
     )
 
     # Initial values.
-    e_field, h_field = 2 * [jnp.zeros_like(epsilon)]
+    e_field, h_field = 2 * [jnp.zeros_like(permittivity)]
 
     errs_hist = []  # TODO: Remove.
 
@@ -447,8 +444,8 @@ def solve(
         # Run simulation.
         state, outs = simulate_newer(
             state=state,
-            epsilon=epsilon,
-            sigma=sigma,
+            epsilon=permittivity,
+            sigma=conductivity,
             sources=[inputspec],
             outputs=[outputspec],
             grid=grid,
@@ -462,8 +459,8 @@ def solve(
             fields=freq_fields,
             omegas=omegas,
             phases=phases,
-            epsilon=epsilon,
-            sigma=sigma,
+            epsilon=permittivity,
+            sigma=conductivity,
             source=source,
             grid=grid,
         )
