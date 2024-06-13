@@ -20,7 +20,7 @@ wl = 1.55
 Lx = 5 * width
 Lz = 5 * height
 Ly = 4.0
-dL = 10e-3
+dL = 50e-3
 
 # 3. Define the geometry - SIMPLE EXAMPLE AKA NO AVERAGING
 Nx, Ny, Nz = [int(Ll // dL) for Ll in (Lx, Ly, Lz)]
@@ -36,9 +36,9 @@ xx = jnp.linspace(-Lx/2, Lx/2-dL, Nx)
 yy = jnp.linspace(-Ly/2, Ly/2-dL, Ny)
 zz = jnp.linspace(-Lz/2, Lz/2-dL, Nz)
 grid = (
-    jnp.append(xx, xx + dL/2),
-    jnp.append(yy, yy + dL/2),
-    jnp.append(zz, zz + dL/2),
+    jnp.array((xx, xx + dL/2)).T,
+    jnp.array((yy, yy + dL/2)).T,
+    jnp.array((zz, zz + dL/2)).T,
 )
 
 fig, axes = plt.subplots(1, 3)
@@ -115,18 +115,19 @@ plt.savefig("mode.png")
 plt.close()
 
 # 6. Boundary conditions calculation
-conductivity = jnp.ones(eps.shape[1:])
+conductivity = jnp.zeros_like(eps)
 
 # 7. Simulate
 dt = 0.99 * jnp.min(eps) / jnp.sqrt(3)
 # tmax = 1e-11
-tt = jnp.arange(0, int(1e5)) * dt
+Ntmax = 1e2
+tt = jnp.arange(0, Ntmax) * dt
 outp = fdtd.OutputSpec(
     start=0,
     interval=100,
     num=int(tt[-1] // dt),
-    offsets=(0, Ny - src_ypos, 0),
-    shapes=(Nx, 1, Nz)
+    offsets=[(0, Ny - src_ypos, 0)],
+    shapes=[(Nx, 1, Nz)]
 )
 mode_temp = jnp.exp(-jnp.square((tt - len(tt)* 2/5) / 1e4))
 
