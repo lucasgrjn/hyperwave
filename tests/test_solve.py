@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import jax.numpy as jnp
 
-from hyperwave import sampling, solve
+from hyperwave import solve
 
 
 def run_solve(shape, freq_range, err_thresh, max_steps):
     xx, yy, zz = shape
-    dt = 0.99 / jnp.sqrt(3)
-    grid = solve.Grid(dt=dt, du=tuple(jnp.ones((s, 2)) for s in shape))
-    epsilon, sigma, source = [jnp.zeros(grid.field_shape())] * 3
+    grid = tuple(jnp.ones((s, 2)) for s in shape)
+    epsilon, sigma, source = [jnp.zeros((3,) + shape)] * 3
     epsilon += 1
     sigma += 6e-2
     source = source.at[2, xx // 2, yy // 2, zz // 2].set(2.0)

@@ -57,7 +57,7 @@ Outputs = Tuple[jax.Array, ...]
 
 
 def simulate(
-    dt: float,
+    dt: ArrayLike,
     grid: Grid,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
@@ -90,6 +90,8 @@ def simulate(
       ``(state, outputs)`` corresponding to updated simulation state and output
       fields corresponding to ``output_spec``.
     """
+
+    # TODO: Do some input verification here?
 
     # Precomputed update coefficients
     z = conductivity * dt / (2 * permittivity)
