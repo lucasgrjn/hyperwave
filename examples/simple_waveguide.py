@@ -120,20 +120,20 @@ conductivity = jnp.zeros_like(eps)
 # 7. Simulate
 dt = 0.99 * jnp.min(eps) / jnp.sqrt(3)
 # tmax = 1e-11
-Ntmax = 1e2
+Ntmax = 4
 tt = jnp.arange(0, Ntmax) * dt
 outp = fdtd.OutputSpec(
     start=0,
     interval=100,
     num=int(tt[-1] // dt),
-    offsets=[(0, Ny - src_ypos, 0)],
-    shapes=[(Nx, 1, Nz)]
+    offsets=[(0, src_ypos + 2, 0), (0, Ny - src_ypos, 0)],
+    shapes=[(Nx, 1, Nz), (Nx, 1, Nz)],
 )
 mode_temp = jnp.exp(-jnp.square((tt - len(tt)* 2/5) / 1e4))
 
 # plt.plot(tt, jnp.abs(mode_temp))
 # plt.show()
-fdtd.simulate(
+state, outs = fdtd.simulate(
     dt,
     grid,
     eps,
@@ -142,5 +142,12 @@ fdtd.simulate(
     outp,
 )
 
-# # 8. Plot results
-
+# 8. Plot results
+fig, axes = plt.subplots(2, 3)
+for idax in range(len(axes.flatten())):
+    iout, idir = idax // 3, idax % 3
+    axes[iout,idir].imshow(
+        outs[iout][-1].squeeze()[idir],
+        extent=extent_xz,
+    )
+plt.show()
