@@ -2,16 +2,30 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import NamedTuple, Tuple
 
 from jax.typing import ArrayLike
 
 # Tuple of 3 integers, used for ``(x, y, z)`` data.
 Int3 = Tuple[int, int, int]
 
+
+# TODO: Document.
+class Subvolume(NamedTuple):
+    offset: Int3
+    shape: Int3
+
+
 # ``(start, stop, num)`` representing ``num`` points over the interval
-# ``[start, stop]``.
-Range = Tuple[float, float, int]
+# ``[start, stop].``.
+# TODO: Document.
+class Range(NamedTuple):
+    start: float
+    stop: float
+    num: int
+
+
+# Range = Tuple[float, float, int]
 
 # Minimal, sufficient definition of the Yee lattice for the simulation volume.
 #

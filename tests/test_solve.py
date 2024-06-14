@@ -19,7 +19,7 @@ def run_solve(shape, freq_range, err_thresh, max_steps):
         freq_range=freq_range,
         permittivity=epsilon,
         conductivity=sigma,
-        source=source,
+        source=solve.Source(offset=(0, 0, 0), field=source),
         grid=grid,
         err_thresh=err_thresh,
         max_steps=max_steps,

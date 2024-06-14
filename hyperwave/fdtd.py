@@ -18,7 +18,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from . import grids, utils
-from .typing import Grid, Int3
+from .typing import Grid, Int3, Subvolume
 
 
 class State(NamedTuple):
@@ -42,14 +42,12 @@ class Source(NamedTuple):
         )
 
 
-class OutputSpec(NamedTuple):
-    """E-field subvolumes to snapshot from simulation."""
+class SnapshotRange(NamedTuple):
+    """Update steps at which to produce snapshots."""
 
     start: int
     interval: int
     num: int
-    offsets: Sequence[Int3]
-    shapes: Sequence[Int3]
 
 
 # Convenience type alias for simulation outputs.
@@ -62,7 +60,8 @@ def simulate(
     permittivity: ArrayLike,
     conductivity: ArrayLike,
     source: Source,
-    output_spec: OutputSpec,
+    output_volumes: Sequence[Subvolume],
+    snapshot_range: SnapshotRange,
     state: State | None = None,
 ) -> Tuple[State, Outputs]:
     """Execute the finite-difference time-domain (FDTD) simulation method.
@@ -81,8 +80,9 @@ def simulate(
           values.
         conductivity: ``(3, xx, yy, zz)`` array of conductivity values.
         source: Current source to inject in the simulation.
-        output_spec: Defines E-field snapshots to return, relative to the time
-          step of the initial state of the simulation.
+        output_volumes: E-field subvolumes of the simulation space to return.
+        snapshot_range: Interval of regularly-spaced time steps at which to
+          generate output volumes.
         state: Initial state of the simulation. Defaults to field values of
           ``0`` everywhere at ``step = -1``.
 
@@ -108,8 +108,8 @@ def simulate(
     def output_fn(index: int, outs: Outputs, e_field: ArrayLike) -> Outputs:
         """``outs`` updated at ``index`` with ``e_field``."""
         return tuple(
-            out.at[index].set(utils.get(e_field, offset, shape))
-            for out, offset, shape in zip(outs, output_spec.offsets, output_spec.shapes)
+            out.at[index].set(utils.get(e_field, ov.offset, ov.shape))
+            for out, ov in zip(outs, output_volumes)
         )
 
     def update_and_output(
@@ -129,19 +129,18 @@ def simulate(
             e_field=jnp.zeros((3,) + grids.shape(grid)),
             h_field=jnp.zeros((3,) + grids.shape(grid)),
         )
-    outs = tuple(
-        jnp.empty((output_spec.num, 3) + shape) for shape in output_spec.shapes
-    )
+
+    outs = tuple(jnp.empty((snapshot_range.num, 3) + ov.shape) for ov in output_volumes)
 
     # Initial update to first output.
     state, outs = update_and_output(
-        state, outs, output_index=0, num_steps=output_spec.start - state.step
+        state, outs, output_index=0, num_steps=snapshot_range.start - state.step
     )
 
     # Materialize the rest of the output snapshots.
-    for output_index in range(1, output_spec.num):
+    for output_index in range(1, snapshot_range.num):
         state, outs = update_and_output(
-            state, outs, output_index, num_steps=output_spec.interval
+            state, outs, output_index, num_steps=snapshot_range.interval
         )
 
     return state, outs

@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 
 from . import fdtd, sampling, wave_equation
-from .typing import Grid, Range
+from .typing import Grid, Range, Subvolume
 
 # Type alias for jax function inputs. See
 # https://jax.readthedocs.io/en/latest/jax.typing.html#jax-typing-best-practices
@@ -22,46 +22,33 @@ Offset = Tuple[int, int, int]
 FieldShape = Tuple[int, int, int, int]
 
 
-class SnapshotRange(NamedTuple):
-    start: int
-    interval: int
-    num: int
-
-
-class OutputSpec(NamedTuple):
-    offset: Offset
-    shape: Shape
-    range: SnapshotRange
-
-
-class InputSpec(NamedTuple):
+class Source(NamedTuple):
     offset: Offset
     field: ArrayLike
-    waveform: ArrayLike
 
+    def phase(self, omegas: ArrayLike) -> jax.Array:
+        return -1 * jnp.pi * jnp.arange(len(omegas))
 
-def source_waveform(
-    t: ArrayLike,
-    omegas: ArrayLike,
-    phases: ArrayLike,
-    rise_time: float,
-) -> jax.Array:
-    # NOTE: ``rise_time`` refers to the amount of time taken for the sigmoid
-    # envelope function to go from an amplitude of roughly ``0.01`` to ``0.99``.
+    def waveform(self, omegas: ArrayLike, t: ArrayLike) -> jax.Array:
+        phi = omegas[:, None] * t + self.phase(omegas)[:, None]
+        return jnp.sum(jnp.exp(1j * phi), axis=0)
 
-    # NOTE: This happens when we go from ``jax.nn.sigmoid(-4.6)`` to
-    # ``jax.nn.sigmoid(+4.6)``.
-
-    return (jax.nn.sigmoid(4.6 * (2 * t / rise_time - 1))) * jnp.sum(
-        (jnp.exp(1j * (omegas[:, None] * t + phases[:, None]))), axis=0
-    )
+    # TODO: Move out.
+    def as_fdtd(self, omegas: ArrayLike, t: ArrayLike) -> fdtd.Source:
+        return fdtd.Source(
+            offset=self.offset,
+            field=self.field,
+            waveform=self.waveform(omegas, t),
+        )
 
 
 def simulate_newer(
     epsilon: ArrayLike,
     sigma: ArrayLike,
-    sources: Sequence[InputSpec],
-    outputs: Sequence[OutputSpec],
+    # sources: Sequence[InputSpec],
+    source: fdtd.Source,
+    output_volumes: Sequence[Subvolume],
+    snapshot_range: fdtd.SnapshotRange,
     grid: Grid,
     dt: ArrayLike,
     state: fdtd.State | None = None,
@@ -72,18 +59,9 @@ def simulate_newer(
         grid=grid,
         permittivity=epsilon,
         conductivity=sigma,
-        source=fdtd.Source(
-            offset=sources[0].offset,
-            field=sources[0].field,
-            waveform=sources[0].waveform,
-        ),
-        output_spec=fdtd.OutputSpec(
-            offsets=[outputs[0].offset],
-            shapes=[outputs[0].shape],
-            start=outputs[0].range.start,
-            interval=outputs[0].range.interval,
-            num=outputs[0].range.num,
-        ),
+        source=source,
+        output_volumes=output_volumes,
+        snapshot_range=snapshot_range,
         state=state,
     )
     return state, outs
@@ -100,7 +78,8 @@ def solve(
     freq_range: Range,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
-    source: ArrayLike,  # TODO: More general structure that has a time-freq connection.
+    # TODO: More general structure that has a time-freq connection.
+    source: Source,
     # TODO: Add output subvolumes
     grid: Grid,
     err_thresh: float,
@@ -136,20 +115,22 @@ def solve(
     if max_steps % steps_per_sim != 0:
         max_steps = max_steps + steps_per_sim - (max_steps % steps_per_sim)
 
-    # TODO: Do something for phases here.
-    phases = -1 * jnp.pi * jnp.arange(len(omegas))
+    # # TODO: Do something for phases here.
+    # phases = -1 * jnp.pi * jnp.arange(len(omegas))
 
-    # Form input for simulation.
-    inputspec = InputSpec(
-        offset=(0, 0, 0),
-        field=source,
-        waveform=source_waveform(
-            t=dt * jnp.arange(max_steps),
-            omegas=omegas,
-            phases=phases,
-            rise_time=1,  # TODO: Put constant somewhere better.
-        ),
-    )
+    src = source.as_fdtd(omegas, dt * jnp.arange(max_steps))  # TODO: +1 for max_steps?
+
+    # # Form input for simulation.
+    # inputspec = InputSpec(
+    #     offset=(0, 0, 0),
+    #     field=source,
+    #     waveform=source_waveform(
+    #         t=dt * jnp.arange(max_steps),
+    #         omegas=omegas,
+    #         phases=phases,
+    #         rise_time=1,  # TODO: Put constant somewhere better.
+    #     ),
+    # )
 
     # Initial values.
     e_field, h_field = 2 * [jnp.zeros_like(permittivity)]
@@ -157,16 +138,12 @@ def solve(
     errs_hist = []  # TODO: Remove.
 
     state = None
-
+    output_volumes = [Subvolume(offset=(0, 0, 0), shape=shape)]
     for start_step in range(0, max_steps, steps_per_sim):
-        outputspec = OutputSpec(
-            offset=(0, 0, 0),
-            shape=shape,
-            range=SnapshotRange(
-                start=start_step + steps_per_sim - sample_steps,
-                interval=sample_every_n_steps,
-                num=2 * len(omegas),
-            ),
+        snapshot_range = fdtd.SnapshotRange(
+            start=start_step + steps_per_sim - sample_steps,
+            interval=sample_every_n_steps,
+            num=2 * len(omegas),
         )
 
         # Run simulation.
@@ -174,8 +151,9 @@ def solve(
             state=state,
             epsilon=permittivity,
             sigma=conductivity,
-            sources=[inputspec],
-            outputs=[outputspec],
+            source=src,
+            output_volumes=output_volumes,
+            snapshot_range=snapshot_range,
             grid=grid,
             dt=dt,
         )
@@ -184,8 +162,8 @@ def solve(
         # TODO: Generalize beyond 1st output.
         t = dt * (
             0.5
-            + outputspec.range.start
-            + outputspec.range.interval * jnp.arange(outputspec.range.num)
+            + snapshot_range.start
+            + snapshot_range.interval * jnp.arange(snapshot_range.num)
         )
         freq_fields = sampling.project(outs[0], omegas, t)
 
@@ -193,10 +171,10 @@ def solve(
         errs, err_fields = wave_equation.wave_equation_errors(
             fields=freq_fields,
             omegas=omegas,
-            phases=phases,
+            phases=source.phase(omegas),
             epsilon=permittivity,
             sigma=conductivity,
-            source=source,
+            source=source.field,  # TODO: Need to convert from offset...
             grid=grid,
         )
         errs_hist.append(errs)
