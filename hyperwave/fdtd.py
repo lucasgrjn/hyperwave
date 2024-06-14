@@ -18,7 +18,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from . import grids, utils
-from .typing import Grid, Int3, Subvolume
+from .typing import Grid, Range, Subfield, Volume
 
 
 class State(NamedTuple):
@@ -29,39 +29,21 @@ class State(NamedTuple):
     h_field: ArrayLike
 
 
-class Source(NamedTuple):
-    """Current source to inject into the simulation."""
-
-    offset: Int3  # Location to inject source in simulation volume.
-    field: ArrayLike  # ``(3, xx0, yy0, zz0)`` complex-valued source field.
-    waveform: ArrayLike  # ``(tt,)`` complex-valued source amplitude.
-
-    def inject(self, e_field: ArrayLike, step: int) -> jax.Array:
-        return utils.at(e_field, self.offset, self.field.shape[-3:]).add(
-            -jnp.real(self.field * self.waveform[step])
-        )
-
-
-class SnapshotRange(NamedTuple):
-    """Update steps at which to produce snapshots."""
-
-    start: int
-    interval: int
-    num: int
-
-
 # Convenience type alias for simulation outputs.
 Outputs = Tuple[jax.Array, ...]
 
 
+# TODO: Add TF/SF source case.
 def simulate(
     dt: ArrayLike,
     grid: Grid,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
-    source: Source,
-    output_volumes: Sequence[Subvolume],
-    snapshot_range: SnapshotRange,
+    # source: Source,
+    source_field: Subfield,
+    source_waveform: ArrayLike,
+    output_volumes: Sequence[Volume],
+    snapshot_range: Range,
     state: State | None = None,
 ) -> Tuple[State, Outputs]:
     """Execute the finite-difference time-domain (FDTD) simulation method.
@@ -98,11 +80,21 @@ def simulate(
     ca = (1 - z) / (1 + z)
     cb = dt / permittivity / (1 + z)
 
+    def inject_source(field: ArrayLike, step: ArrayLike) -> ArrayLike:
+        return utils.at(field, source_field.offset, source_field.field.shape[-3:]).add(
+            -jnp.real(source_field.field * source_waveform[step])
+        )
+
     def step_fn(_, state: State) -> State:
         """``state`` evolved by one FDTD update."""
         step, e, h = state
         h = h - dt * grids.curl(e, grid, is_forward=True)
-        e = ca * e + cb * source.inject(grids.curl(h, grid, is_forward=False), step + 1)
+
+        # def inject(self, e_field: ArrayLike, step: int) -> jax.Array:
+        #     return utils.at(e_field, self.offset, self.field.shape[-3:]).add(
+        #         -jnp.real(self.field * self.waveform[step])
+        #     )
+        e = ca * e + cb * inject_source(grids.curl(h, grid, is_forward=False), step + 1)
         return State(step + 1, e, h)
 
     def output_fn(index: int, outs: Outputs, e_field: ArrayLike) -> Outputs:

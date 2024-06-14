@@ -2,25 +2,23 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
-
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from .typing import Range
+from .typing import Band
 
 
-def omegas(freq_range: Range) -> jax.Array:
-    start, stop, num = freq_range
+def omegas(freq_band: Band) -> jax.Array:
+    start, stop, num = freq_band
     if num == 1:
         return jnp.array([(start + stop) / 2])
     else:
         return jnp.linspace(start, stop, num)
 
 
-def sampling_interval(freq_range: Range) -> float:
-    w = omegas(freq_range)
+def sampling_interval(freq_band: Band) -> float:
+    w = omegas(freq_band)
     if len(w) == 1:
         return float(jnp.pi / (2 * w[0]))
     else:

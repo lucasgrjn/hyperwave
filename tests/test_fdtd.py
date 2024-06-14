@@ -6,11 +6,11 @@ import jax.numpy as jnp
 import numpy as np
 
 from hyperwave import fdtd
-from hyperwave.typing import Subvolume
+from hyperwave.typing import Range, Subfield, Volume
 
 
 def test_fdtd_simulation():
-    snapshot_range = fdtd.SnapshotRange(
+    snapshot_range = Range(
         start=10,
         interval=2,
         num=3,
@@ -23,12 +23,9 @@ def test_fdtd_simulation():
         grid=(jnp.ones((1, 2)), jnp.ones((1, 2)), jnp.ones((1, 2))),
         permittivity=jnp.ones((3, 1, 1, 1)),
         conductivity=jnp.zeros((3, 1, 1, 1)),
-        source=fdtd.Source(
-            offset=(0, 0, 0),
-            field=-jnp.ones((3, 1, 1, 1)),
-            waveform=jnp.ones((num_steps,)),
-        ),
-        output_volumes=[Subvolume((0, 0, 0), (2, 1, 1))],
+        source_field=Subfield(offset=(0, 0, 0), field=-jnp.ones((3, 1, 1, 1))),
+        source_waveform=jnp.ones((num_steps,)),
+        output_volumes=[Volume((0, 0, 0), (2, 1, 1))],
         snapshot_range=snapshot_range,
     )
     assert state.e_field.shape == (3, 1, 1, 1)

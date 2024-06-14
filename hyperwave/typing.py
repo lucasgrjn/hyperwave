@@ -6,26 +6,41 @@ from typing import NamedTuple, Tuple
 
 from jax.typing import ArrayLike
 
+# NOTE: Please avoid including logic here! Included types should be trivially simple.
+
 # Tuple of 3 integers, used for ``(x, y, z)`` data.
 Int3 = Tuple[int, int, int]
 
 
-# TODO: Document.
-class Subvolume(NamedTuple):
+class Subfield(NamedTuple):
+    """Field defined at ``offset`` in space."""
+
+    offset: Int3
+    field: ArrayLike
+
+
+class Volume(NamedTuple):
+    """Identifies a volume of size ``shape`` at ``offset`` in space."""
+
     offset: Int3
     shape: Int3
 
 
-# ``(start, stop, num)`` representing ``num`` points over the interval
-# ``[start, stop].``.
-# TODO: Document.
 class Range(NamedTuple):
+    """Describes values ``start + i * interval`` for ``i`` in ``[0, num)``."""
+
+    start: int
+    interval: int
+    num: int
+
+
+class Band(NamedTuple):
+    """Describes ``num`` regularly spaced values within ``[start, stop].``"""
+
     start: float
     stop: float
     num: int
 
-
-# Range = Tuple[float, float, int]
 
 # Minimal, sufficient definition of the Yee lattice for the simulation volume.
 #
