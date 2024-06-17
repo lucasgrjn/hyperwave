@@ -8,4 +8,5 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "hyperwave"
 authors = [{name = "Jesse Lu", email = "jesselu@spinsphotonics.com"}]
-dynamic = ["v0.0.0", "next-gen photonic simulation"]
+version = "v0.0.0"
+description = "next-gen photonic simulation"
