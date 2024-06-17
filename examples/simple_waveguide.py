@@ -6,7 +6,7 @@ import numpy as onp
 from scipy.optimize import brentq
 
 import hyperwave.fdtd as fdtd
-from hyperwave.utils import at
+from hyperwave.typing import Range, Subfield, Volume
 
 
 # 1. Define the properties of the waveguide
@@ -100,11 +100,7 @@ mode = jnp.ones((3, Nx, 1, Nz))
 # Add the mode as Ez at 1/4 of the window
 mode = mode.at[-1, :, 0 , :].set(mode_full_x * mode_full_z)
 src_ypos = Ny // 4
-_mode_src = partial(
-    fdtd.Source,
-    offset=(0, src_ypos, 0,),
-    field=mode,
-)
+mode_src= Subfield((0, src_ypos, 0,), mode)
 
 # plt.imshow(mode_full_x * mode_full_z)
 plt.imshow(mode[2].squeeze().T, extent=extent_xz, cmap='inferno')
@@ -122,24 +118,24 @@ dt = 0.99 * jnp.min(eps) / jnp.sqrt(3)
 # tmax = 1e-11
 Ntmax = 4
 tt = jnp.arange(0, Ntmax) * dt
-outp = fdtd.OutputSpec(
-    start=0,
-    interval=100,
-    num=int(tt[-1] // dt),
-    offsets=[(0, src_ypos + 2, 0), (0, Ny - src_ypos, 0)],
-    shapes=[(Nx, 1, Nz), (Nx, 1, Nz)],
-)
+
+outp_volume1 = Volume(offset=(0, src_ypos + 2, 0), shape=(Nx, 1, Nz))
+outp_volume2 = Volume(offset=(0, Ny - src_ypos, 0), shape=(Nx, 1, Nz))
+outp_range = Range(1, 100, int(tt[-1] // dt))
+
 mode_temp = jnp.exp(-jnp.square((tt - len(tt)* 2/5) / 1e4))
 
 # plt.plot(tt, jnp.abs(mode_temp))
 # plt.show()
 state, outs = fdtd.simulate(
-    dt,
-    grid,
-    eps,
-    conductivity,
-    _mode_src(waveform=mode_temp),
-    outp,
+    dt=dt,
+    grid=grid,
+    permittivity=eps,
+    conductivity=conductivity,
+    source_field=mode_src,
+    source_waveform=mode_temp,
+    output_volumes=(outp_volume1, outp_volume2),
+    snapshot_range=outp_range,
 )
 
 # 8. Plot results
