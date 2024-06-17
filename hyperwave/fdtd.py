@@ -18,7 +18,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from . import grids, utils
-from .typing import Grid, Int3
+from .typing import Grid, Range, Subfield, Volume
 
 
 class State(NamedTuple):
@@ -29,40 +29,21 @@ class State(NamedTuple):
     h_field: ArrayLike
 
 
-class Source(NamedTuple):
-    """Current source to inject into the simulation."""
-
-    offset: Int3  # Location to inject source in simulation volume.
-    field: ArrayLike  # ``(3, xx0, yy0, zz0)`` complex-valued source field.
-    waveform: ArrayLike  # ``(tt,)`` complex-valued source amplitude.
-
-    def inject(self, e_field: ArrayLike, step: int) -> jax.Array:
-        return utils.at(e_field, self.offset, self.field.shape[-3:]).add(
-            -jnp.real(self.field * self.waveform[step])
-        )
-
-
-class OutputSpec(NamedTuple):
-    """E-field subvolumes to snapshot from simulation."""
-
-    start: int
-    interval: int
-    num: int
-    offsets: Sequence[Int3]
-    shapes: Sequence[Int3]
-
-
 # Convenience type alias for simulation outputs.
 Outputs = Tuple[jax.Array, ...]
 
 
+# TODO: Add TF/SF source case.
 def simulate(
     dt: ArrayLike,
     grid: Grid,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
-    source: Source,
-    output_spec: OutputSpec,
+    # source: Source,
+    source_field: Subfield,
+    source_waveform: ArrayLike,
+    output_volumes: Sequence[Volume],
+    snapshot_range: Range,
     state: State | None = None,
 ) -> Tuple[State, Outputs]:
     """Execute the finite-difference time-domain (FDTD) simulation method.
@@ -81,8 +62,9 @@ def simulate(
           values.
         conductivity: ``(3, xx, yy, zz)`` array of conductivity values.
         source: Current source to inject in the simulation.
-        output_spec: Defines E-field snapshots to return, relative to the time
-          step of the initial state of the simulation.
+        output_volumes: E-field subvolumes of the simulation space to return.
+        snapshot_range: Interval of regularly-spaced time steps at which to
+          generate output volumes.
         state: Initial state of the simulation. Defaults to field values of
           ``0`` everywhere at ``step = -1``.
 
@@ -98,18 +80,28 @@ def simulate(
     ca = (1 - z) / (1 + z)
     cb = dt / permittivity / (1 + z)
 
+    def inject_source(field: ArrayLike, step: ArrayLike) -> ArrayLike:
+        return utils.at(field, source_field.offset, source_field.field.shape[-3:]).add(
+            -jnp.real(source_field.field * source_waveform[step])
+        )
+
     def step_fn(_, state: State) -> State:
         """``state`` evolved by one FDTD update."""
         step, e, h = state
         h = h - dt * grids.curl(e, grid, is_forward=True)
-        e = ca * e + cb * source.inject(grids.curl(h, grid, is_forward=False), step + 1)
+
+        # def inject(self, e_field: ArrayLike, step: int) -> jax.Array:
+        #     return utils.at(e_field, self.offset, self.field.shape[-3:]).add(
+        #         -jnp.real(self.field * self.waveform[step])
+        #     )
+        e = ca * e + cb * inject_source(grids.curl(h, grid, is_forward=False), step + 1)
         return State(step + 1, e, h)
 
     def output_fn(index: int, outs: Outputs, e_field: ArrayLike) -> Outputs:
         """``outs`` updated at ``index`` with ``e_field``."""
         return tuple(
-            out.at[index].set(utils.get(e_field, offset, shape))
-            for out, offset, shape in zip(outs, output_spec.offsets, output_spec.shapes)
+            out.at[index].set(utils.get(e_field, ov.offset, ov.shape))
+            for out, ov in zip(outs, output_volumes)
         )
 
     def update_and_output(
@@ -129,19 +121,18 @@ def simulate(
             e_field=jnp.zeros((3,) + grids.shape(grid)),
             h_field=jnp.zeros((3,) + grids.shape(grid)),
         )
-    outs = tuple(
-        jnp.empty((output_spec.num, 3) + shape) for shape in output_spec.shapes
-    )
+
+    outs = tuple(jnp.empty((snapshot_range.num, 3) + ov.shape) for ov in output_volumes)
 
     # Initial update to first output.
     state, outs = update_and_output(
-        state, outs, output_index=0, num_steps=output_spec.start - state.step
+        state, outs, output_index=0, num_steps=snapshot_range.start - state.step
     )
 
     # Materialize the rest of the output snapshots.
-    for output_index in range(1, output_spec.num):
+    for output_index in range(1, snapshot_range.num):
         state, outs = update_and_output(
-            state, outs, output_index, num_steps=output_spec.interval
+            state, outs, output_index, num_steps=snapshot_range.interval
         )
 
     return state, outs
