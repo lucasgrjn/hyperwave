@@ -18,11 +18,11 @@ from .typing import Band, Grid, Range, Subfield, Volume
 
 # TODO: Need to include phases for the source somewhere here.
 def solve(
+    grid: Grid,
     freq_band: Band,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
-    source: Subfield,
-    grid: Grid,
+    source: Subfield,  # Consider `` | ArrayLike``
     err_thresh: float,
     max_steps: int,
     output_volumes: Sequence[Volume] | None = None,

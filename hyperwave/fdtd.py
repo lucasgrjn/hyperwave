@@ -22,7 +22,7 @@ from .typing import Grid, Range, Subfield, Volume
 
 
 class State(NamedTuple):
-    """State of the simulation with E-field a half-step ahead of H-field."""
+    """State of the simulation with ``e_field`` a half-step ahead of ``h_field``."""
 
     step: int
     e_field: ArrayLike
@@ -33,13 +33,11 @@ class State(NamedTuple):
 Outputs = Tuple[jax.Array, ...]
 
 
-# TODO: Add TF/SF source case.
 def simulate(
     dt: ArrayLike,
     grid: Grid,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
-    # source: Source,
     source_field: Subfield,
     source_waveform: ArrayLike,
     output_volumes: Sequence[Volume],
@@ -53,24 +51,22 @@ def simulate(
 
     Args:
         dt: Dimensionless value of the amount of time advanced per FDTD update.
-        grid: 3-tuple of arrays defining the simulation grid along the spatial
-          axes. Each array must be of shape ``(:, 2)`` where the ``[:, 1]``
-          values correspond to component spacings which are shifted by a
-          half-cell along the positive axis direction relative to the ``[:, 0]``
-          values.
+        grid: Spacing of the simulation grid.
         permittivity: ``(3, xx, yy, zz)`` array of (relative) permittivity
           values.
         conductivity: ``(3, xx, yy, zz)`` array of conductivity values.
-        source: Current source to inject in the simulation.
+        source_field: ``Subfield`` describing the complex-valued simulation
+          input.
+        source_waveform: ``(tt,)`` array of complex amplitudes for ``source_field``.
         output_volumes: E-field subvolumes of the simulation space to return.
         snapshot_range: Interval of regularly-spaced time steps at which to
           generate output volumes.
         state: Initial state of the simulation. Defaults to field values of
-          ``0`` everywhere at ``step = -1``.
+          ``0`` everywhere at ``step=-1``.
 
     Returns:
       ``(state, outputs)`` corresponding to updated simulation state and output
-      fields corresponding to ``output_spec``.
+      fields corresponding to ``output_volumes`` and ``snapshot_range``.
     """
 
     # TODO: Do some input verification here?
