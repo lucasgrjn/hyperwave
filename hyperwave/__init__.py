@@ -1,2 +1,1 @@
-from .fdtd import simulate
-from .typing import Grid
+from . import solver

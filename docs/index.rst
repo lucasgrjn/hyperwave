@@ -50,4 +50,4 @@ We're currently just at the design stage: if you really care about solving Maxwe
    :maxdepth: 1
    :caption: Reference
 
-   types
+   solver
