@@ -29,8 +29,8 @@ Primary API
 Secondary API
 -------------
 
-.. autofunction:: simulate
 .. autoclass:: State
+.. autofunction:: simulate
 
 Reference
 ---------

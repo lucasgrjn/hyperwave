@@ -11,12 +11,7 @@ from jax.typing import ArrayLike
 from . import fdtd, sampling, wave_equation
 from .typing import Band, Grid, Range, Subfield, Volume
 
-# TODO: Need to figure out the API here. Something like
-# output=None --> return full outputs, otherwise return specific subvolumes.
-# err_thresh=None --> Don't compute error, just go directly for ``max_steps``.
 
-
-# TODO: Need to include phases for the source somewhere here.
 def solve(
     grid: Grid,
     freq_band: Band,
@@ -26,7 +21,7 @@ def solve(
     err_thresh: float | None,
     max_steps: int,
     output_volumes: Sequence[Volume] | None = None,
-) -> Tuple[jax.Array | Tuple[jax.Array, ...], jax.Array | None, bool]:
+) -> Tuple[jax.Array | Tuple[jax.Array, ...], jax.Array | None, int]:
     r"""Solve the time-harmonic electromagnetic wave equation.
 
     :py:func:`solve` attempts to solve
@@ -82,7 +77,9 @@ def solve(
         source: Complex-valued current excitation.
         err_thresh: Terminate when the error of the fields at each frequency
           are below this value. If ``None``, do not compute error values and
-          instead terminate on the ``max_steps`` condition only.
+          instead terminate on the ``max_steps`` condition only. For
+          ``err_thresh <= 0``, termination on ``max_steps`` is guaranteed
+          without omitting the error computation.
         max_steps: Maximum number of simulation update steps to execute.
           This is a "soft" termination barrier as additional steps beyond
           ``max_steps`` may be needed to extract solution fields.
@@ -91,7 +88,17 @@ def solve(
           solution field are returned.
 
     Returns:
-        blah
+        ``(outs, errs, num_steps)`` where
+
+        * when ``output_volumes=None``, ``outs`` is a ``(ww, 3, xx, yy, zz)``
+          array (where ``ww`` is the number of frequencies requested via
+          ``freq_band.num``).
+        * when ``output_volumes`` is a n-tuple of :py:class:`Volume` objects,
+          ``outs`` is an n-tuple of ``(ww, 3, xxi, yyi, zzi)`` corresponding to
+          the ``shape`` parameters in ``output_volumes``.
+        * ``errs`` is a ``(ww,)`` array at each frequency, or else ``None`` for
+          the case where ``err_thresh=None``.
+        * ``num_steps`` is the number of time-domain updates executed.
 
     """
     shape = permittivity.shape[-3:]  # TODO: Do better.

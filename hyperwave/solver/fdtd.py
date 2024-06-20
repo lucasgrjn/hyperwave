@@ -22,7 +22,14 @@ from .typing import Grid, Range, Subfield, Volume
 
 
 class State(NamedTuple):
-    """State of the simulation with ``e_field`` a half-step ahead of ``h_field``."""
+    """Simulation state for the FDTD method.
+
+    Args:
+        step: Time step of the field arrays.
+        e_field: ``(3, xx, yy, zz)`` array representing E-field values.
+        h_field: ``(3, xx, yy, zz)`` array representing H-field values.
+
+    """
 
     step: int
     e_field: ArrayLike
@@ -44,10 +51,46 @@ def simulate(
     snapshot_range: Range,
     state: State | None = None,
 ) -> Tuple[State, Outputs]:
-    """Execute the finite-difference time-domain (FDTD) simulation method.
+    r"""Execute the finite-difference time-domain (FDTD) simulation method.
 
-    Utilizes dimensionless units where the permittivity and susceptibility of
-    vacuum are set to ``1`` as well as dimensionless units for space and time.
+    Uses the convention that for :py:class:`State` at step :math:`i`, the
+    :math:`E`-field is at time :math:`(i + 1/2) \Delta t` and the
+    :math:`H`-field is at :math:`i \Delta t` (additionally, the current source
+    :math:`J`, although spatially located at the :math:`E`-field locations, is
+    temporally located at the :math:`H`-field points). Implements the update
+
+    .. math::
+
+        H^{i+1} &= H^i - \Delta t (\nabla \times E^i)
+
+        E^{i+1} &= C_a E^i + C_b (\nabla \times H^{i+1} - J^i)
+
+    where
+
+    .. math::
+
+      z &= \sigma \Delta t / 2 \epsilon'
+
+      C_a &= (1 - z) / (1 + z)
+
+      C_b &= \Delta t / (1 + z) \epsilon'
+
+    and
+
+    * :math:`\epsilon'` is the real-valued permittivity, and
+    * :math:`\sigma` is the real-valued conductivity.
+
+    Current source excitation is limited to a fixed complex-valued field pattern
+    modulated by a complex-valued waveform such that the injected source is the
+    real-part of the product of the field and waveform.
+
+    Only subdomains of the :math:`E`-field are available as outputs, and these
+    only at a set of regularly-spaced time points.
+
+    This pure-JAX, feature-minimal implementation of the FDTD method also serves
+    to identify the minimum set of features that subsequent simulation engines
+    will require in order to serve the :py:func:`solve` API.
+
 
     Args:
         dt: Dimensionless value of the amount of time advanced per FDTD update.
@@ -65,8 +108,14 @@ def simulate(
           ``0`` everywhere at ``step=-1``.
 
     Returns:
-      ``(state, outputs)`` corresponding to updated simulation state and output
-      fields corresponding to ``output_volumes`` and ``snapshot_range``.
+      ``(state, outputs)`` where
+
+      * ``state`` is of type :py:class:`State` and is advanced so as to fulfill
+        the most advanced time step requested by ``snapshot_range``, and
+      * ``outputs`` is a tuple of ``(nn, 3, xxi, yyi, zzi)`` arrays
+        corresponding to the subvolumes identied in ``output_volumes`` and with
+        ``nn`` as the number of snapshots as given by ``snapshot_range.num``.
+
     """
 
     # TODO: Do some input verification here?
@@ -76,7 +125,8 @@ def simulate(
     ca = (1 - z) / (1 + z)
     cb = dt / permittivity / (1 + z)
 
-    def inject_source(field: ArrayLike, step: ArrayLike) -> ArrayLike:
+    def source_fn(field: ArrayLike, step: ArrayLike) -> ArrayLike:
+        """``field`` with current source at time ``step`` added."""
         return utils.at(field, source_field.offset, source_field.field.shape[-3:]).add(
             -jnp.real(source_field.field * source_waveform[step])
         )
@@ -86,11 +136,7 @@ def simulate(
         step, e, h = state
         h = h - dt * grids.curl(e, grid, is_forward=True)
 
-        # def inject(self, e_field: ArrayLike, step: int) -> jax.Array:
-        #     return utils.at(e_field, self.offset, self.field.shape[-3:]).add(
-        #         -jnp.real(self.field * self.waveform[step])
-        #     )
-        e = ca * e + cb * inject_source(grids.curl(h, grid, is_forward=False), step + 1)
+        e = ca * e + cb * source_fn(grids.curl(h, grid, is_forward=False), step + 1)
         return State(step + 1, e, h)
 
     def output_fn(index: int, outs: Outputs, e_field: ArrayLike) -> Outputs:
