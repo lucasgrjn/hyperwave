@@ -22,12 +22,78 @@ def solve(
     freq_band: Band,
     permittivity: ArrayLike,
     conductivity: ArrayLike,
-    source: Subfield,  # Consider `` | ArrayLike``
-    err_thresh: float,
+    source: Subfield,
+    err_thresh: float | None,
     max_steps: int,
     output_volumes: Sequence[Volume] | None = None,
-) -> Tuple[jax.Array, jax.Array, int, bool]:
-    """Solution fields and error for the wave equation at ``omegas``."""
+) -> Tuple[jax.Array | Tuple[jax.Array, ...], jax.Array | None, bool]:
+    r"""Solve the time-harmonic electromagnetic wave equation.
+
+    :py:func:`solve` attempts to solve
+    :math:`\nabla \times \nabla \times E - \omega^2 \epsilon E = i \omega J`
+    where
+
+    * :math:`\nabla \times` is the `curl operation <https://en.wikipedia.org/wiki/Curl_(mathematics)>`_,
+    * :math:`E` is the electric-field,
+    * :math:`\omega` is the angular frequency,
+    * :math:`\epsilon` is the relative permittivity, and
+    * :math:`J` is the electric current excitation.
+
+    Dimensionsless units are used such that
+
+    * :math:`\epsilon_0 = 1` and :math:`\mu_0 = 1`, the permittivity and
+      permeability of vacuum are set to (dimensionless) :math:`1`,
+    * :math:`c = 1`, the speed of light is also equal (dimensionless) :math:`1`,
+    * space is also dimensionless, and
+    * :math:`\omega = 2 \pi / \lambda_0`, the angular frequency can be defined
+      relative to (dimensionless) vacuum wavelength.
+
+    :math:`E`, :math:`\epsilon`, and :math:`J` values are located on the
+    `Yee lattice <https://en.wikipedia.org/wiki/Finite-difference_time-domain_method>`_,
+    at locations corresponding to the electric field position.
+
+    Supports simple dielectric materials (no disperson or nonlinearity, loss
+    supported) via :math:`\epsilon = \epsilon' + i \sigma / \omega`, where
+    :math:`\epsilon'` is the real-valued permittivity and :math:`\sigma` is the
+    real-valued conductivity. Anisotropy is explicitly supported by virtue that
+    the components of :math:`\epsilon` can be arbitrarily valued, although
+    off-diagonal values of the permittivity tensor are not supported.
+
+    :py:func:`solve` can obtain solutions to the wave equation for multiple
+    regularly-spaced angular frequencies simultaneously; however, each frequency
+    is not allowed to have its own independent input current source.
+
+    The error in the wave equation is defined as
+    :math:`(1 / \sqrt{n}) \cdot \lVert \nabla \times \nabla \times E - \omega^2 \epsilon E - i \omega J \rVert / \lVert \omega J \rVert`
+    where :math:`n` is the number of elements in the solution field :math:`E`.
+
+    For very large simulations (possibly over many frequencies), we may not
+    want to store the entirety of the solution fields. In these cases, the
+    error computation can be elided and we can choose to return only the desired
+    subdomains of the output fields.
+
+    Args:
+        grid: Spacing of the simulation grid.
+        freq_band: Angular frequencies at which to produce solution fields.
+        permittivity: ``(3, xx, yy, zz)`` array of real-valued permittivity
+          values.
+        conductivity: ``(3, xx, yy, zz)`` array of real-valued conductivity
+          values.
+        source: Complex-valued current excitation.
+        err_thresh: Terminate when the error of the fields at each frequency
+          are below this value. If ``None``, do not compute error values and
+          instead terminate on the ``max_steps`` condition only.
+        max_steps: Maximum number of simulation update steps to execute.
+          This is a "soft" termination barrier as additional steps beyond
+          ``max_steps`` may be needed to extract solution fields.
+        output_volumes: If ``None`` (default), then the solution fields are
+          returned in their entirety; otherwise, only sub-volumes of the
+          solution field are returned.
+
+    Returns:
+        blah
+
+    """
     shape = permittivity.shape[-3:]  # TODO: Do better.
 
     omegas = sampling.omegas(freq_band)
