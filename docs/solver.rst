@@ -35,8 +35,8 @@ Secondary API
 Reference
 ---------
 
-.. autoclass:: Grid
 .. autoclass:: Band
+.. autoclass:: Grid
 .. autoclass:: Range
 .. autoclass:: Subfield
 .. autoclass:: Volume

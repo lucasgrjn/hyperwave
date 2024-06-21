@@ -103,7 +103,7 @@ def solve(
     """
     shape = permittivity.shape[-3:]  # TODO: Do better.
 
-    omegas = sampling.omegas(freq_band)
+    omegas = sampling.band_values(freq_band)
     sampling_interval = sampling.sampling_interval(freq_band)
 
     # Steps to sample against.

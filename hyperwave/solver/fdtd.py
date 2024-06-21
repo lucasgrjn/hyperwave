@@ -1,13 +1,4 @@
-"""Implementation of FDTD method.
-
-A simple, feature-minimal implementation of the finite-difference time-domain
-method. Serves as the underlying simulation method for solving the wave
-equation.
-
-Strategically used as an internal API in anticipation of allowing alternate,
-optimized FDTD routines to be used in the place of the one outlined here.
-
-"""
+"""Implementation of the FDTD method. """
 
 from __future__ import annotations
 
@@ -17,8 +8,8 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from . import grids, utils
-from .typing import Grid, Range, Subfield, Volume
+from . import grids
+from .typing import Grid, Int3, Range, Subfield, Volume
 
 
 class State(NamedTuple):
@@ -127,7 +118,7 @@ def simulate(
 
     def source_fn(field: ArrayLike, step: ArrayLike) -> ArrayLike:
         """``field`` with current source at time ``step`` added."""
-        return utils.at(field, source_field.offset, source_field.field.shape[-3:]).add(
+        return _at(field, source_field.offset, source_field.field.shape[-3:]).add(
             -jnp.real(source_field.field * source_waveform[step])
         )
 
@@ -142,7 +133,7 @@ def simulate(
     def output_fn(index: int, outs: Outputs, e_field: ArrayLike) -> Outputs:
         """``outs`` updated at ``index`` with ``e_field``."""
         return tuple(
-            out.at[index].set(utils.get(e_field, ov.offset, ov.shape))
+            out.at[index].set(_get(e_field, ov.offset, ov.shape))
             for out, ov in zip(outs, output_volumes)
         )
 
@@ -178,3 +169,23 @@ def simulate(
         )
 
     return state, outs
+
+
+def _at(field: ArrayLike, offset: Int3, shape: Int3):
+    """Modify ``shape`` values of ``field`` at ``offset``."""
+    return field.at[
+        ...,
+        offset[0] : offset[0] + shape[0],
+        offset[1] : offset[1] + shape[1],
+        offset[2] : offset[2] + shape[2],
+    ]
+
+
+def _get(field: ArrayLike, offset: Int3, shape: Int3):
+    """Returns ``shape`` values of ``field`` at ``offset``."""
+    return field[
+        ...,
+        offset[0] : offset[0] + shape[0],
+        offset[1] : offset[1] + shape[1],
+        offset[2] : offset[2] + shape[2],
+    ]

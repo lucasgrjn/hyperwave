@@ -19,7 +19,9 @@ def test_fdtd_simulation():
     )
     state, outs = hw.solver.simulate(
         dt=1.0,
-        grid=(jnp.ones((1, 2)), jnp.ones((1, 2)), jnp.ones((1, 2))),
+        grid=hw.solver.Grid(
+            dx=jnp.ones((1, 2)), dy=jnp.ones((1, 2)), dz=jnp.ones((1, 2))
+        ),
         permittivity=jnp.ones((3, 1, 1, 1)),
         conductivity=jnp.zeros((3, 1, 1, 1)),
         source_field=hw.solver.Subfield(
@@ -43,7 +45,7 @@ def test_fdtd_simulation():
 
 def run_solve(shape, freq_band, err_thresh, max_steps):
     xx, yy, zz = shape
-    grid = tuple(jnp.ones((s, 2)) for s in shape)
+    grid = hw.solver.Grid(*[jnp.ones((s, 2)) for s in shape])
     epsilon, sigma, source = [jnp.zeros((3,) + shape)] * 3
     epsilon += 1
     sigma += 6e-2

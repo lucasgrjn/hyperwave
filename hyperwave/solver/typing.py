@@ -1,4 +1,4 @@
-"""Basic definitions."""
+"""Basic types."""
 
 from __future__ import annotations
 
@@ -12,33 +12,88 @@ from jax.typing import ArrayLike
 Int3 = Tuple[int, int, int]
 
 
-# Minimal, sufficient definition of the Yee lattice for the simulation volume.
-#
-# Defines the distance between adjacent components along x-, y-, and z-axes.
-# Each of the three arrays should be of shape ``(uu, 2)`` for each of the 3
-# spatial axes, where the ``[:, 1]`` values are shifted by half a cell in the
-# positive direction of the axis in relation to the ``[:, 0]`` values.
-#
-class Grid(Tuple[ArrayLike, ArrayLike, ArrayLike]):
-    """Thing"""
+class Grid(NamedTuple):
+    """Defines the Yee-lattice for the simulation volume.
+
+    The Yee-lattice is a Cartesian grid of Yee cells which must be defined
+    along each spatial axis by the cell-to-cell spacings between cell centers
+    as well as between cell boundaries, because of the offset nature of field
+    components in the Yee cell.
+
+    Each axis is thus defined by a ``(uu, 2)`` array of spacing values where
+
+    * ``[:, 0]`` values are the center-to-center spacings, and
+    * ``[:, 1]`` values are the boundary-to-boundary spacings,
+
+    and where the ``[:, 0]`` intervals are shifted in the negative direction
+    relative to the ``[:, 1]`` intervals.
+
+    The convention for the absolute location of field components is thus
+    suggested to be as follows
+
+    * place the boundary of the first cell of the Yee lattice at the ``0``
+      axis position,
+    * place the offset components of the first cell at position equal to
+      ``dxyz[0, 0] / 2`` where ``dxyz`` stands in for the spacing array along
+      the relevant axis,
+    * then let the ``i`` th cell boundary be at position ``sum(dxyz[:i, 1])`` and
+      the ``i`` th cell center be at position
+      ``sum(dxyz[1:i, 0]) + dxyz[0, 0] / 2``.
+
+
+    Args:
+        dx: ``(xx, 2)`` of Yee-lattice spacings along the x-axis.
+        dy: ``(yy, 2)`` of Yee-lattice spacings along the y-axis.
+        dz: ``(zz, 2)`` of Yee-lattice spacings along the z-axis.
+
+    """
+
+    dx: ArrayLike
+    dy: ArrayLike
+    dz: ArrayLike
+
+    @property
+    def du(self):
+        return (self.dx, self.dy, self.dz)
 
 
 class Subfield(NamedTuple):
-    """Field defined at ``offset`` in space."""
+    """Field defined at ``offset`` in space.
+
+    Args:
+        offset: ``(x0, y0, z0)`` cell in the simulation grid at which
+          ``field`` is defined.
+        field: ``(3, xx0, yy0, zz0)`` array defining the field at ``offset``.
+
+    """
 
     offset: Int3
     field: ArrayLike
 
 
 class Volume(NamedTuple):
-    """Identifies a volume of size ``shape`` at ``offset`` in space."""
+    """Identifies a volume of size ``shape`` at ``offset`` in space.
+
+    Args:
+        offset: ``(x0, y0, z0)`` point at which the volume is offset.
+        shape: ``(xx0, yy0, zz0)`` shape of the volume.
+
+
+    """
 
     offset: Int3
     shape: Int3
 
 
 class Range(NamedTuple):
-    """Describes values ``start + i * interval`` for ``i`` in ``[0, num)``."""
+    """Describes values ``start + i * interval`` for ``i`` in ``[0, num)``.
+
+    Args:
+        start: Value at which the the range starts.
+        interval: Spacing between values.
+        num: Total number of values in the range.
+
+    """
 
     start: int
     interval: int
@@ -46,7 +101,17 @@ class Range(NamedTuple):
 
 
 class Band(NamedTuple):
-    """Describes ``num`` regularly spaced values within ``[start, stop].``"""
+    """Describes ``num`` regularly spaced values within ``[start, stop].``
+
+    The suggested convention for ``num=1`` is that the :py:class:`Band`
+    represents the single-element array with value ``(start + stop) / 2``.
+
+    Args:
+        start: Extremal value of the band.
+        stop: Other extremal value of the band.
+        num: Number of equally-spaced values within ``[start, stop]``.
+
+    """
 
     start: float
     stop: float
