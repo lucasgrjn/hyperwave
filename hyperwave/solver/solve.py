@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from . import fdtd, sampling, wave_equation
+from . import fdtd, grids, sampling
 from .typing import Band, Grid, Range, Subfield, Volume
 
 
@@ -177,12 +177,12 @@ def solve(
         freq_fields = sampling.project(outs[0], omegas, t)
 
         # Compute error.
-        errs, err_fields = wave_equation.wave_equation_errors(
+        errs, err_fields = wave_equation_error(
             fields=freq_fields,
             omegas=omegas,
-            phases=phases,
-            epsilon=permittivity,
-            sigma=conductivity,
+            source_phase=phases,
+            permittivity=permittivity,
+            conductivity=conductivity,
             source=source,
             grid=grid,
         )
@@ -199,3 +199,41 @@ def solve(
             )
 
     return freq_fields, errs, max_steps, False, err_fields, errs_hist
+
+
+# TODO: Simplify this so that it looks basically identical to ``solve()`` except for the additional ``fields`` parameter.
+def wave_equation_error(
+    grid: Grid,
+    permittivity: ArrayLike,
+    conductivity: ArrayLike,
+    fields: ArrayLike,
+    source: Subfield,
+    omegas: ArrayLike,  # TODO: Switch to freq_band?
+    source_phase: ArrayLike,  # TODO: Try to remove this?
+) -> jax.Array:
+    r"""Wave equation error of solution fields.
+
+    Args:
+        grid: Same as in :py:func:`solve`.
+        permittivity: Same as in :py:func:`solve`.
+        conductivity: Same as in :py:func:`solve`.
+        fields:
+        source:
+        omegas:
+
+    """
+    w = jnp.expand_dims(omegas, axis=range(-4, 0))
+    phi = jnp.expand_dims(source_phase, axis=range(-4, 0))
+    err = (
+        grids.curl(grids.curl(fields, grid, is_forward=True), grid, is_forward=False)
+        - w**2 * (permittivity - 1j * conductivity / w) * fields
+        # + 1j * w * source * jnp.exp(1j * phi)
+    )
+    # TODO: Consider factoring out the ``_at()``.
+    err = fdtd._at(err, source.offset, source.field.shape[-3:]).add(
+        1j * w * source.field * jnp.exp(1j * phi)
+    )
+    return (
+        jnp.sqrt(jnp.sum(jnp.abs(err) ** 2, axis=(1, 2, 3, 4)))
+        / (omegas * jnp.linalg.norm(source.field))
+    ), err

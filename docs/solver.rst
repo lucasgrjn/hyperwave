@@ -24,6 +24,7 @@ Primary API
 -----------
 
 .. autofunction:: solve
+.. autofunction:: wave_equation_error
 
 
 Secondary API
