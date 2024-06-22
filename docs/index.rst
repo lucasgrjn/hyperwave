@@ -21,12 +21,6 @@ A next-generation photonic simulation engine that is:
 We're currently just at the design stage: if you really care about solving Maxwell's equations, please join our `discord channel <https://discord.gg/CfzDRjeX>`_!
 
 
-Testing autodoc...
-
-.. currentmodule:: hyperwave.fdtd
-
-.. autofunction:: simulate
-
 .. code-block:: python
 
    import hyperwave as hw
@@ -49,23 +43,11 @@ Testing autodoc...
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: API
+   :caption: Example Usage
 
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: How it works under the hood
+   :caption: Reference
 
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: How it works under the hood
-
-.. toctree::
-   :hidden:
-   :maxdepth: 1
-   :caption: How it works under the hood
-
-
-   
-
+   solver

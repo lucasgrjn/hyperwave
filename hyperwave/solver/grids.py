@@ -48,7 +48,7 @@ def curl(field: ArrayLike, grid: Grid, is_forward: bool) -> jax.Array:
 
     delta_index = 1 if is_forward else 0
     deltas = tuple(
-        jnp.expand_dims(grid[a][:, delta_index], range(1, 3 - a)) for a in range(3)
+        jnp.expand_dims(grid.du[a][:, delta_index], range(1, 3 - a)) for a in range(3)
     )
 
     fx, fy, fz = [field[..., i, :, :, :] for i in range(3)]
