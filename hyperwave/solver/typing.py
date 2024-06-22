@@ -4,12 +4,40 @@ from __future__ import annotations
 
 from typing import NamedTuple, Tuple
 
+import jax
+import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 # NOTE: Please avoid including logic here! Included types should be trivially simple.
 
 # Tuple of 3 integers, used for ``(x, y, z)`` data.
 Int3 = Tuple[int, int, int]
+
+
+class Band(NamedTuple):
+    """Describes ``num`` regularly spaced values within ``[start, stop].``
+
+    The suggested convention for ``num=1`` is that the :py:class:`Band`
+    represents the single-element array with value ``(start + stop) / 2``.
+
+    Args:
+        start: Extremal value of the band.
+        stop: Other extremal value of the band.
+        num: Number of equally-spaced values within ``[start, stop]``.
+
+    """
+
+    start: float
+    stop: float
+    num: int
+
+    @property
+    def values(self) -> jax.Array:
+        """Values represented by ``band``."""
+        if self.num == 1:
+            return jnp.array([(self.start + self.stop) / 2])
+        else:
+            return jnp.linspace(self.start, self.stop, self.num)
 
 
 class Grid(NamedTuple):
@@ -71,20 +99,6 @@ class Subfield(NamedTuple):
     field: ArrayLike
 
 
-class Volume(NamedTuple):
-    """Identifies a volume of size ``shape`` at ``offset`` in space.
-
-    Args:
-        offset: ``(x0, y0, z0)`` point at which the volume is offset.
-        shape: ``(xx0, yy0, zz0)`` shape of the volume.
-
-
-    """
-
-    offset: Int3
-    shape: Int3
-
-
 class Range(NamedTuple):
     """Describes values ``start + i * interval`` for ``i`` in ``[0, num)``.
 
@@ -100,19 +114,15 @@ class Range(NamedTuple):
     num: int
 
 
-class Band(NamedTuple):
-    """Describes ``num`` regularly spaced values within ``[start, stop].``
-
-    The suggested convention for ``num=1`` is that the :py:class:`Band`
-    represents the single-element array with value ``(start + stop) / 2``.
+class Volume(NamedTuple):
+    """Identifies a volume of size ``shape`` at ``offset`` in space.
 
     Args:
-        start: Extremal value of the band.
-        stop: Other extremal value of the band.
-        num: Number of equally-spaced values within ``[start, stop]``.
+        offset: ``(x0, y0, z0)`` point at which the volume is offset.
+        shape: ``(xx0, yy0, zz0)`` shape of the volume.
+
 
     """
 
-    start: float
-    stop: float
-    num: int
+    offset: Int3
+    shape: Int3

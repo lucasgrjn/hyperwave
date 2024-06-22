@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from . import fdtd, grids, sampling
+from . import fdtd, grids, sampling, utils
 from .typing import Band, Grid, Range, Subfield, Volume
 
 
@@ -101,9 +101,10 @@ def solve(
         * ``num_steps`` is the number of time-domain updates executed.
 
     """
+    utils.check_problem_inputs(grid, permittivity, conductivity, source)
     shape = permittivity.shape[-3:]  # TODO: Do better.
 
-    omegas = sampling.band_values(freq_band)
+    omegas = freq_band.values
     sampling_interval = sampling.sampling_interval(freq_band)
 
     # Steps to sample against.
@@ -142,10 +143,9 @@ def solve(
     # Initial values.
     e_field, h_field = 2 * [jnp.zeros_like(permittivity)]
 
-    errs_hist = []  # TODO: Remove.
-
     state = None
     output_volumes = [Volume(offset=(0, 0, 0), shape=shape)]
+    # TODO: Can we change this into a jax loop?
     for start_step in range(0, max_steps, steps_per_sim):
         snapshot_range = Range(
             start=start_step + steps_per_sim - sample_steps,
@@ -191,19 +191,11 @@ def solve(
             source=source,
             grid=grid,
         )
-        errs_hist.append(errs)
 
         if jnp.max(errs) < err_thresh:
-            return (
-                freq_fields,
-                errs,
-                start_step + steps_per_sim,
-                True,
-                err_fields,
-                errs_hist,
-            )
+            return (freq_fields, errs, start_step + steps_per_sim)
 
-    return freq_fields, errs, max_steps, False, err_fields, errs_hist
+    return (freq_fields, errs, max_steps)
 
 
 def wave_equation_error(
@@ -231,7 +223,7 @@ def wave_equation_error(
         corresponding to the solutions fields in ``fields``.
 
     """
-    omegas = sampling.band_values(freq_band)
+    omegas = freq_band.values
     w = jnp.expand_dims(omegas, axis=range(-4, 0))
     # phi = jnp.expand_dims(source_phase, axis=range(-4, 0))
     err = (
@@ -239,8 +231,7 @@ def wave_equation_error(
         - w**2 * (permittivity - 1j * conductivity / w) * fields
         # + 1j * w * source * jnp.exp(1j * phi)
     )
-    # TODO: Consider factoring out the ``_at()``.
-    err = fdtd._at(err, source.offset, source.field.shape[-3:]).add(
+    err = utils.at(err, source.offset, source.field.shape[-3:]).add(
         1j * w * source.field  # * jnp.exp(1j * phi)
     )
     return (

@@ -37,6 +37,7 @@ Reference
 ---------
 
 .. autoclass:: Band
+   :members: values
 .. autoclass:: Grid
 .. autoclass:: Range
 .. autoclass:: Subfield

@@ -26,7 +26,7 @@ def project(
 
 def sampling_interval(freq_band: Band) -> float:
     """Snapshot interval for efficiently sampling ``freq_band`` frequencies."""
-    w = band_values(freq_band)
+    w = freq_band.values
     if len(w) == 1:
         # For a single frequency, we simply use the quarter-period interval.
         return float(jnp.pi / (2 * w[0]))
@@ -42,14 +42,6 @@ def sampling_interval(freq_band: Band) -> float:
             multiple=jnp.pi / (len(w) * w_avg),
             offset=0.5,
         )
-
-
-def band_values(band: Band) -> jax.Array:
-    """Values represented by ``band``."""
-    if band.num == 1:
-        return jnp.array([(band.start + band.stop) / 2])
-    else:
-        return jnp.linspace(band.start, band.stop, band.num)
 
 
 def _round_to_mult(x, multiple, offset=0):
